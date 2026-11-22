@@ -1,0 +1,92 @@
+/* theme.css — Identidade visual oficial (extraída de frontend/index.html) */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FAFAFA;
+  color: #2C3E50;
+  overflow-x: hidden;
+  margin: 0;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+  background: rgba(30, 136, 229, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+/* Animação Suave das Cartas de Navegação (Fundo) */
+@keyframes fadeChart {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.08;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.nav-chart {
+  position: fixed;
+  color: #1E88E5;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Posicionamentos e tempos individuais para parecer orgânico */
+.chart-vor {
+  top: 10%;
+  left: 2%;
+  width: 350px;
+  animation: fadeChart 15s ease-in-out infinite 0s;
+  transform: rotate(15deg);
+}
+
+.chart-airway {
+  top: 40%;
+  right: -5%;
+  width: 500px;
+  animation: fadeChart 22s ease-in-out infinite 5s;
+  transform: rotate(-20deg);
+}
+
+.chart-runway {
+  bottom: 5%;
+  left: 15%;
+  width: 280px;
+  animation: fadeChart 18s ease-in-out infinite 10s;
+  transform: rotate(45deg);
+}
+
+.chart-vor-2 {
+  top: 65%;
+  right: 25%;
+  width: 250px;
+  animation: fadeChart 20s ease-in-out infinite 2s;
+  transform: rotate(-45deg);
+}
+
+.blob {
+  position: absolute;
+  filter: blur(80px);
+  z-index: -2;
+  opacity: 0.5;
+  border-radius: 50%;
+  pointer-events: none;
+}

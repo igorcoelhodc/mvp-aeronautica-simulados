@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aeronáutica Simulados | Decole seus estudos</title>
+
+    <!-- Google Fonts: Poppins para Títulos, Inter para Textos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS + Configuração Compartilhada -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+
+    <!-- Tema Compartilhado -->
+    <link rel="stylesheet" href="./css/theme.css">
+</head>
+<body class="font-inter antialiased relative">
+
+    <!-- BACKGROUND DINÂMICO DE NAVEGAÇÃO AÉREA -->
+    <!-- Elemento 1: VOR / Rosa dos Ventos -->
+    <svg class="nav-chart chart-vor" viewBox="0 0 200 200" fill="none" stroke="currentColor">
+        <circle cx="100" cy="100" r="80" stroke-width="1.5" stroke-dasharray="4 8" />
+        <circle cx="100" cy="100" r="60" stroke-width="0.5" />
+        <path d="M100 5 L100 195 M5 100 L195 100" stroke-width="1" stroke-dasharray="10 5" />
+        <polygon points="95,20 105,20 100,5" fill="currentColor" />
+        <text x="110" y="30" font-family="monospace" font-size="10" fill="currentColor">360°</text>
+        <text x="110" y="100" font-family="monospace" font-size="12" font-weight="bold" fill="currentColor">VCP</text>
+        <circle cx="100" cy="100" r="3" fill="currentColor" />
+    </svg>
+
+    <!-- Elemento 2: Aerovia (Airway) e Waypoints -->
+    <svg class="nav-chart chart-airway" viewBox="0 0 400 200" fill="none" stroke="currentColor">
+        <path d="M20 150 L150 80 L280 120 L380 40" stroke-width="2" stroke-dasharray="12 6" />
+        <path d="M150 80 L200 20" stroke-width="1" stroke-dasharray="4 4" />
+        <!-- Waypoint Triangles -->
+        <polygon points="20,145 25,155 15,155" fill="none" stroke-width="2" />
+        <polygon points="150,75 155,85 145,85" fill="none" stroke-width="2" />
+        <polygon points="280,115 285,125 275,125" fill="none" stroke-width="2" />
+        <polygon points="380,35 385,45 375,45" fill="none" stroke-width="2" />
+        <!-- Textos técnicos decorativos -->
+        <text x="50" y="110" font-family="monospace" font-size="10" fill="currentColor" transform="rotate(-28, 50, 110)">UZ45 • FL240</text>
+        <text x="150" y="65" font-family="monospace" font-size="12" fill="currentColor">MUKIT</text>
+        <text x="280" y="145" font-family="monospace" font-size="12" fill="currentColor">NIBEK</text>
+    </svg>
+
+    <!-- Elemento 3: Layout de Pista (Runway) -->
+    <svg class="nav-chart chart-runway" viewBox="0 0 150 150" fill="none" stroke="currentColor">
+        <rect x="60" y="20" width="30" height="110" rx="2" stroke-width="1.5" />
+        <path d="M75 25 L75 125" stroke-width="1" stroke-dasharray="6 6" />
+        <!-- Thresholds -->
+        <path d="M65 30 L85 30 M65 120 L85 120" stroke-width="1.5" />
+        <path d="M20 50 L60 75 M130 50 L90 75" stroke-width="1" stroke-dasharray="2 4" />
+        <!-- Frequencia ILS -->
+        <text x="20" y="45" font-family="monospace" font-size="10" fill="currentColor">ILS 109.30</text>
+        <text x="63" y="15" font-family="monospace" font-size="8" fill="currentColor">RWY 09</text>
+    </svg>
+
+    <!-- Elemento 4: VOR Menor Deslocado -->
+    <svg class="nav-chart chart-vor-2" viewBox="0 0 150 150" fill="none" stroke="currentColor">
+        <rect x="60" y="60" width="30" height="30" stroke-width="1" />
+        <circle cx="75" cy="75" r="5" fill="currentColor" />
+        <circle cx="75" cy="75" r="40" stroke-width="0.5" stroke-dasharray="2 4" />
+        <path d="M75 15 L75 135 M15 75 L135 75" stroke-width="0.5" />
+        <text x="80" y="70" font-family="monospace" font-size="10" fill="currentColor">BGC</text>
+    </svg>
+
+    <!-- Blobs (Luzes de Fundo) -->
+    <div class="blob bg-primary/40 w-96 h-96 top-[-10%] left-[-10%]"></div>
+    <div class="blob bg-secondary/40 w-80 h-80 top-[20%] right-[-5%]"></div>
+
+    <!-- Navegação (Navbar) -->
+    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 py-4">
+        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
+            <a href="./index.html" class="flex items-center gap-2 group">
+                <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform">
+                    <i class="ph-bold ph-airplane-tilt text-2xl"></i>
+                </div>
+                <span class="font-poppins font-bold text-xl text-carbon tracking-tight">
+                    Aeronáutica<span class="text-primary">Simulados</span>
+                </span>
+            </a>
+
+            <div class="hidden md:flex items-center gap-8 font-medium">
+                <a href="#recursos" class="hover:text-primary transition-colors">Recursos</a>
+                <a href="#metodologia" class="hover:text-primary transition-colors">Metodologia</a>
+                <a href="#planos" class="hover:text-primary transition-colors">Planos</a>
+            </div>
+
+            <div class="hidden md:block">
+                <a href="./login.html" class="bg-accent text-white px-6 py-2.5 rounded-full font-poppins font-semibold shadow-lg shadow-accent/30 hover:shadow-glow hover:-translate-y-0.5 transition-all">
+                    Começar Grátis
+                </a>
+            </div>
+
+            <button id="mobile-menu-btn" class="md:hidden text-carbon text-3xl focus:outline-none">
+                <i class="ph ph-list"></i>
+            </button>
+        </div>
+
+        <!-- Menu Mobile -->
+        <div id="mobile-menu" class="hidden absolute top-full left-0 w-full glass flex-col px-6 py-4 gap-4 md:hidden shadow-glass border-t border-white/20">
+            <a href="#recursos" class="font-medium text-lg hover:text-primary">Recursos</a>
+            <a href="#metodologia" class="font-medium text-lg hover:text-primary">Metodologia</a>
+            <a href="#planos" class="font-medium text-lg hover:text-primary">Planos</a>
+            <a href="./login.html" class="bg-accent text-white text-center px-6 py-3 rounded-xl font-poppins font-semibold w-full mt-2">
+                Começar Grátis
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden z-10">
+        <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+
+            <div class="space-y-8 z-10">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-dark text-primary font-medium text-sm border border-primary/20 backdrop-blur-md">
+                    <span class="relative flex h-3 w-3">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                    </span>
+                    Nova plataforma no ar!
+                </div>
+
+                <h1 class="font-poppins font-extrabold text-5xl lg:text-6xl text-carbon leading-tight">
+                    Decole seus estudos com <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">precisão</span> e <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">leveza</span>.
+                </h1>
+
+                <p class="text-lg lg:text-xl text-carbon/80 max-w-lg leading-relaxed bg-white/40 p-2 rounded-lg backdrop-blur-sm">
+                    Esqueça as apostilas monótonas. Nossa plataforma traz simulados dinâmicos e cursos para aviação com uma pegada moderna, jovem e gamificada.
+                </p>
+
+                <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                    <a href="./login.html?tab=register" class="bg-accent text-white px-8 py-4 rounded-2xl font-poppins font-semibold text-lg shadow-lg shadow-accent/30 hover:shadow-glow hover:-translate-y-1 transition-all flex items-center justify-center gap-2">
+                        Criar Conta Gratuita <i class="ph-bold ph-arrow-right"></i>
+                    </a>
+                    <a href="#recursos" class="glass px-8 py-4 rounded-2xl font-poppins font-semibold text-carbon hover:bg-white/80 transition-all flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-play-circle text-primary text-xl"></i> Ver como funciona
+                    </a>
+                </div>
+            </div>
+
+            <!-- "Dashboard" Mockup Estático -->
+            <div class="relative z-10 flex justify-center lg:justify-end">
+                <div class="absolute w-[300px] h-[300px] lg:w-[450px] lg:h-[450px] bg-gradient-to-tr from-primary/20 to-secondary/20 rounded-full blur-2xl"></div>
+
+                <div class="relative w-full max-w-md glass-dark rounded-[2rem] p-6 shadow-glass border border-white/60 bg-white/40 backdrop-blur-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                        </div>
+                        <div class="text-xs font-semibold text-primary px-3 py-1 bg-primary/10 rounded-full">Simulado de Navegação</div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h3 class="font-poppins font-semibold text-lg text-carbon">Qual o efeito do vento de través no pouso?</h3>
+
+                        <div class="space-y-3">
+                            <div class="p-3 rounded-xl border-2 border-white/50 bg-white/60 cursor-pointer hover:border-primary transition-colors flex items-center gap-3">
+                                <div class="w-5 h-5 rounded-full border-2 border-carbon/30 bg-white"></div>
+                                <span class="text-sm font-medium">Aumento da sustentação.</span>
+                            </div>
+                            <div class="p-3 rounded-xl border-2 border-primary bg-primary/10 cursor-pointer flex items-center gap-3 relative overflow-hidden shadow-sm">
+                                <div class="absolute right-0 top-0 bottom-0 w-1 bg-primary"></div>
+                                <i class="ph-fill ph-check-circle text-primary text-xl"></i>
+                                <span class="text-sm font-medium text-primary">Desvio da trajetória ideal.</span>
+                            </div>
+                            <div class="p-3 rounded-xl border-2 border-white/50 bg-white/60 cursor-pointer hover:border-primary transition-colors flex items-center gap-3">
+                                <div class="w-5 h-5 rounded-full border-2 border-carbon/30 bg-white"></div>
+                                <span class="text-sm font-medium">Redução brusca de arrasto.</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex items-center gap-4">
+                            <div class="h-2 w-full bg-carbon/10 rounded-full overflow-hidden">
+                                <div class="h-full bg-accent w-2/3 rounded-full"></div>
+                            </div>
+                            <span class="text-xs font-bold text-accent">66%</span>
+                        </div>
+                    </div>
+
+                    <div class="absolute -right-8 -top-8 text-5xl text-accent transform rotate-12 drop-shadow-xl">
+                        <i class="ph-fill ph-paper-plane-tilt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Seção de Recursos -->
+    <section id="recursos" class="py-20 bg-white relative z-10 rounded-[3rem] shadow-[0_-10px_40px_rgba(0,0,0,0.03)] border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="font-poppins font-bold text-3xl md:text-4xl text-carbon mb-4">Preparação sem complicação</h2>
+                <p class="text-carbon/70 text-lg max-w-2xl mx-auto">Tudo que você precisa para passar nas bancas da ANAC, organizado em uma interface que você vai adorar usar.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="p-8 rounded-[2rem] bg-cloud border border-gray-100 hover:shadow-xl hover:-translate-y-2 transition-all group">
+                    <div class="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-transform">
+                        <i class="ph-fill ph-target"></i>
+                    </div>
+                    <h3 class="font-poppins font-semibold text-xl mb-3 text-carbon">Questões Atualizadas</h3>
+                    <p class="text-carbon/70 text-sm leading-relaxed">Nosso banco de dados é constantemente revisado com as questões mais recentes das bancas de PP, PC e IFR.</p>
+                </div>
+
+                <div class="p-8 rounded-[2rem] bg-cloud border border-gray-100 hover:shadow-xl hover:-translate-y-2 transition-all group">
+                    <div class="w-16 h-16 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-transform">
+                        <i class="ph-fill ph-chart-line-up"></i>
+                    </div>
+                    <h3 class="font-poppins font-semibold text-xl mb-3 text-carbon">Dashboard Inteligente</h3>
+                    <p class="text-carbon/70 text-sm leading-relaxed">Acompanhe seu progresso por matéria. Descubra onde estão seus pontos fracos e receba dicas de estudo personalizadas.</p>
+                </div>
+
+                <div class="p-8 rounded-[2rem] bg-cloud border border-gray-100 hover:shadow-xl hover:-translate-y-2 transition-all group">
+                    <div class="w-16 h-16 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-transform">
+                        <i class="ph-fill ph-devices"></i>
+                    </div>
+                    <h3 class="font-poppins font-semibold text-xl mb-3 text-carbon">Estude Onde Quiser</h3>
+                    <p class="text-carbon/70 text-sm leading-relaxed">Plataforma 100% responsiva. Treine no computador de casa, no tablet durante o voo ou no celular esperando o ônibus.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Final Section -->
+    <section id="comecar" class="py-24 relative overflow-hidden z-10 bg-transparent">
+        <div class="absolute top-0 w-full h-full bg-gradient-to-b from-white to-blue-50/50 -z-10 rounded-b-[3rem]"></div>
+
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="font-poppins font-extrabold text-4xl md:text-5xl text-carbon mb-6">Pronto para assumir o controle?</h2>
+            <p class="text-xl text-carbon/80 mb-10">Junte-se aos futuros pilotos e mecânicos que estão revolucionando a forma de estudar para a aviação.</p>
+
+            <a href="./login.html?tab=register" class="inline-block bg-accent text-white px-10 py-5 rounded-2xl font-poppins font-bold text-xl shadow-xl shadow-accent/40 hover:shadow-glow hover:scale-105 transition-all">
+                Criar Minha Conta Grátis
+            </a>
+            <p class="mt-4 text-sm text-carbon/60 font-medium">Nenhum cartão de crédito necessário no cadastro.</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="w-full bg-carbon pt-16 pb-8 border-t border-white/10 relative z-20">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid md:grid-cols-4 gap-8 mb-12">
+                <div class="md:col-span-2">
+                    <a href="#" class="flex items-center gap-2 mb-4">
+                        <i class="ph-fill ph-airplane-tilt text-3xl text-primary"></i>
+                        <span class="font-poppins font-bold text-2xl text-white tracking-tight">
+                            Aeronáutica<span class="text-primary">Simulados</span>
+                        </span>
+                    </a>
+                    <p class="text-white/60 text-sm max-w-sm">
+                        A plataforma de ensino e simulados aeronáuticos feita para a nova geração da aviação. Moderna, leve e precisa.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-poppins font-semibold text-white mb-4">Plataforma</h4>
+                    <ul class="space-y-2 text-white/60 text-sm">
+                        <li><a href="#" class="hover:text-primary transition-colors">Simulados ANAC</a></li>
+                        <li><a href="#" class="hover:text-primary transition-colors">Cursos Teóricos</a></li>
+                        <li><a href="#" class="hover:text-primary transition-colors">Planos e Preços</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-poppins font-semibold text-white mb-4">Contato</h4>
+                    <ul class="space-y-2 text-white/60 text-sm">
+                        <li><a href="#" class="hover:text-primary transition-colors flex items-center gap-2"><i class="ph ph-envelope"></i> ola@aeronauticasimulados.com.br</a></li>
+                        <li><a href="#" class="hover:text-primary transition-colors flex items-center gap-2"><i class="ph ph-instagram-logo"></i> @aeronauticasimulados</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/40">
+                <p>&copy; 2026 Aeronáutica Simulados. Feito com ❤️ em Goiânia, no coração do Brasil.</p>
+                <div class="flex gap-4">
+                    <a href="#" class="hover:text-white transition-colors">Termos de Uso</a>
+                    <a href="#" class="hover:text-white transition-colors">Política de Privacidade</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="./js/navbar.js"></script>
+</body>
+</html>

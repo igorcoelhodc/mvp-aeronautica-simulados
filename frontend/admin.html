@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo | Aeronáutica Simulados</title>
+
+    <!-- Google Fonts: Poppins para Títulos, Inter para Textos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS + Configuração Compartilhada -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+
+    <!-- Tema Compartilhado -->
+    <link rel="stylesheet" href="./css/theme.css">
+</head>
+<body class="font-inter antialiased relative min-h-screen flex flex-col">
+
+    <!-- BACKGROUND DINÂMICO DE NAVEGAÇÃO AÉREA -->
+    <svg class="nav-chart chart-vor" viewBox="0 0 200 200" fill="none" stroke="currentColor">
+        <circle cx="100" cy="100" r="80" stroke-width="1.5" stroke-dasharray="4 8" />
+        <circle cx="100" cy="100" r="60" stroke-width="0.5" />
+        <path d="M100 5 L100 195 M5 100 L195 100" stroke-width="1" stroke-dasharray="10 5" />
+        <text x="110" y="100" font-family="monospace" font-size="12" font-weight="bold" fill="currentColor">VCP</text>
+        <circle cx="100" cy="100" r="3" fill="currentColor" />
+    </svg>
+    <svg class="nav-chart chart-airway" viewBox="0 0 400 200" fill="none" stroke="currentColor">
+        <path d="M20 150 L150 80 L280 120 L380 40" stroke-width="2" stroke-dasharray="12 6" />
+        <polygon points="150,75 155,85 145,85" fill="none" stroke-width="2" />
+        <polygon points="280,115 285,125 275,125" fill="none" stroke-width="2" />
+        <text x="50" y="110" font-family="monospace" font-size="10" fill="currentColor" transform="rotate(-28, 50, 110)">UZ45 • FL240</text>
+    </svg>
+
+    <!-- Blobs (Luzes de Fundo) -->
+    <div class="blob bg-primary/40 w-96 h-96 top-[-10%] left-[-10%]"></div>
+    <div class="blob bg-secondary/40 w-80 h-80 top-[25%] right-[-5%]"></div>
+
+    <!-- Navegação -->
+    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 py-4">
+        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
+            <a href="./index.html" class="flex items-center gap-2 group">
+                <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform">
+                    <i class="ph-bold ph-airplane-tilt text-2xl"></i>
+                </div>
+                <span class="font-poppins font-bold text-xl text-carbon tracking-tight">
+                    Aeronáutica<span class="text-primary">Admin</span>
+                </span>
+            </a>
+
+            <div class="hidden md:flex items-center gap-6 font-medium">
+                <a href="./index.html" class="hover:text-primary transition-colors">Site</a>
+                <a href="#secao-categorias" class="hover:text-primary transition-colors">Categorias</a>
+                <a href="#secao-questao-form" class="hover:text-primary transition-colors">Questões</a>
+                <span id="admin-user-badge" class="hidden items-center gap-2 px-3.5 py-1.5 rounded-full glass-dark text-xs font-semibold text-primary">
+                    <i class="ph-fill ph-shield-check text-base"></i>
+                    <span id="admin-user-name">Admin</span>
+                </span>
+                <button id="admin-logout-btn" type="button" class="glass px-4 py-2 rounded-full font-poppins font-semibold text-sm text-carbon hover:text-accent transition-colors flex items-center gap-1.5">
+                    <i class="ph-bold ph-sign-out"></i> Sair
+                </button>
+            </div>
+
+            <button id="mobile-menu-btn" class="md:hidden text-carbon text-3xl focus:outline-none">
+                <i class="ph ph-list"></i>
+            </button>
+        </div>
+
+        <!-- Menu Mobile -->
+        <div id="mobile-menu" class="hidden absolute top-full left-0 w-full glass flex-col px-6 py-4 gap-4 md:hidden shadow-glass border-t border-white/20">
+            <a href="./index.html" class="font-medium text-lg hover:text-primary">Site</a>
+            <a href="#secao-categorias" class="font-medium text-lg hover:text-primary">Categorias</a>
+            <a href="#secao-questao-form" class="font-medium text-lg hover:text-primary">Questões</a>
+            <button id="admin-logout-btn-mobile" type="button" class="bg-accent text-white text-center px-6 py-3 rounded-xl font-poppins font-semibold w-full mt-2">
+                Sair
+            </button>
+        </div>
+    </nav>
+
+    <!-- Estado de Validação de Acesso -->
+    <div id="admin-loading" class="relative z-10 flex-1 flex items-center justify-center px-6 pt-28 pb-16">
+        <div class="glass-dark rounded-[2rem] p-8 shadow-glass border border-white/60 bg-white/60 backdrop-blur-xl text-center space-y-3 max-w-md w-full">
+            <i class="ph-bold ph-shield-check text-4xl text-primary animate-pulse"></i>
+            <p class="font-poppins font-semibold text-carbon">Verificando credenciais de administrador...</p>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal (exibido somente após confirmação de perfil ADMIN em /api/auth/me) -->
+    <main id="admin-content" class="hidden relative z-10 flex-1 max-w-7xl w-full mx-auto px-6 pt-28 pb-16 space-y-10">
+
+        <!-- Cabeçalho -->
+        <section class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-dark text-primary font-medium text-xs border border-primary/20 mb-3">
+                    <i class="ph-fill ph-seal-check text-base"></i>
+                    Curadoria Administrativa
+                </div>
+                <h1 class="font-poppins font-extrabold text-3xl md:text-4xl text-carbon">
+                    Gestão de <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Categorias e Questões</span>
+                </h1>
+                <p class="text-carbon/70 mt-1 text-sm md:text-base">Cadastre bancas/matérias, gerencie questões comentadas e desative itens preservando o histórico de simulados.</p>
+            </div>
+        </section>
+
+        <!-- Seção 1: Categorias (Licença + Matéria) -->
+        <section id="secao-categorias" class="glass-dark rounded-[2rem] p-8 shadow-glass border border-white/60 bg-white/55 backdrop-blur-xl space-y-6">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
+                    <i class="ph-fill ph-folders"></i>
+                </div>
+                <div>
+                    <h2 class="font-poppins font-bold text-2xl text-carbon">Categorias (Licença + Matéria)</h2>
+                    <p class="text-sm text-carbon/70">Crie novas combinações de licença ANAC e matéria para classificar o banco de questões.</p>
+                </div>
+            </div>
+
+            <form id="categoria-form" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                <div class="md:col-span-4">
+                    <label for="cat-licenca" class="block text-sm font-medium text-carbon mb-1.5">Licença / Banca</label>
+                    <select id="cat-licenca" name="licenca" required class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <option value="PPA">PPA — Piloto Privado Avião</option>
+                        <option value="PCA">PCA — Piloto Comercial Avião</option>
+                        <option value="PPH">PPH — Piloto Privado Helicóptero</option>
+                        <option value="PCH">PCH — Piloto Comercial Helicóptero</option>
+                        <option value="PLA/ATPL">PLA/ATPL — Piloto de Linha Aérea</option>
+                        <option value="CT">CT — Comissário de Voo</option>
+                        <option value="AVI">AVI — Mecânico Aviônicos</option>
+                        <option value="GMP">GMP — Mecânico Grupo Motopropulsor</option>
+                        <option value="CEL">CEL — Mecânico Célula</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-5">
+                    <label for="cat-materia" class="block text-sm font-medium text-carbon mb-1.5">Matéria</label>
+                    <input id="cat-materia" name="materia" type="text" required maxlength="120" placeholder="Ex.: Regulamentos de Tráfego Aéreo" class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <div class="md:col-span-3">
+                    <button id="cat-submit-btn" type="submit" class="w-full bg-primary text-white px-6 py-3 rounded-xl font-poppins font-semibold text-sm shadow-md shadow-primary/25 hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-plus-circle text-lg"></i> Nova Categoria
+                    </button>
+                </div>
+            </form>
+
+            <p id="categoria-feedback" role="alert" class="hidden px-4 py-3 rounded-xl border text-sm font-medium"></p>
+
+            <div>
+                <p class="text-xs font-semibold text-carbon/60 uppercase tracking-wide mb-2.5">Categorias ativas</p>
+                <div id="categorias-chips" class="flex flex-wrap gap-2 text-xs"></div>
+            </div>
+        </section>
+
+        <!-- Seção 2: Formulário CRUD de Questões Comentadas -->
+        <section id="secao-questao-form" class="glass-dark rounded-[2rem] p-8 shadow-glass border border-white/60 bg-white/55 backdrop-blur-xl">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-note-pencil"></i>
+                    </div>
+                    <div>
+                        <h2 id="questao-form-title" class="font-poppins font-bold text-2xl text-carbon">Cadastrar Questão Comentada</h2>
+                        <p class="text-sm text-carbon/70">Preencha o enunciado, as quatro alternativas (A–D), o gabarito e o comentário técnico.</p>
+                    </div>
+                </div>
+
+                <span id="questao-edit-badge" class="hidden items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent/15 text-accent text-xs font-poppins font-semibold">
+                    <i class="ph-fill ph-pencil-simple"></i> Modo de Edição
+                </span>
+            </div>
+
+            <form id="questao-form" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <input type="hidden" id="questao-id" name="id">
+
+                <div>
+                    <label for="categoria_id" class="block text-sm font-medium text-carbon mb-1.5">Categoria (Licença / Matéria)</label>
+                    <select id="categoria_id" name="categoria_id" required class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <option value="">Selecione a categoria</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="gabarito" class="block text-sm font-medium text-carbon mb-1.5">Gabarito (Alternativa Correta)</label>
+                    <select id="gabarito" name="gabarito" required class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="enunciado" class="block text-sm font-medium text-carbon mb-1.5">Enunciado da Questão</label>
+                    <textarea id="enunciado" name="enunciado" rows="3" required placeholder="Digite o enunciado completo..." class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                </div>
+
+                <div>
+                    <label for="alternativa_a" class="block text-sm font-medium text-carbon mb-1.5">Alternativa A</label>
+                    <input id="alternativa_a" name="alternativa_a" type="text" required class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <div>
+                    <label for="alternativa_b" class="block text-sm font-medium text-carbon mb-1.5">Alternativa B</label>
+                    <input id="alternativa_b" name="alternativa_b" type="text" required class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <div>
+                    <label for="alternativa_c" class="block text-sm font-medium text-carbon mb-1.5">Alternativa C</label>
+                    <input id="alternativa_c" name="alternativa_c" type="text" required class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <div>
+                    <label for="alternativa_d" class="block text-sm font-medium text-carbon mb-1.5">Alternativa D</label>
+                    <input id="alternativa_d" name="alternativa_d" type="text" required class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="comentario" class="block text-sm font-medium text-carbon mb-1.5">Comentário Explicativo do Gabarito</label>
+                    <textarea id="comentario" name="comentario" rows="3" required placeholder="Explique o embasamento técnico ou regulamento (RBAC/ICA)..." class="w-full px-4 py-3 rounded-xl bg-white/85 border border-gray-200 text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+                </div>
+
+                <div class="md:col-span-2 flex flex-wrap justify-end gap-3 pt-2">
+                    <button id="questao-cancel-btn" type="button" class="hidden glass px-6 py-3 rounded-xl font-poppins font-semibold text-sm text-carbon hover:bg-white transition-all">
+                        Cancelar Edição
+                    </button>
+                    <button type="reset" id="questao-reset-btn" class="glass px-6 py-3 rounded-xl font-poppins font-semibold text-sm text-carbon hover:bg-white transition-all">
+                        Limpar
+                    </button>
+                    <button id="questao-submit-btn" type="submit" class="bg-accent text-white px-7 py-3 rounded-xl font-poppins font-semibold text-sm shadow-lg shadow-accent/30 hover:shadow-glow hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                        <i class="ph-bold ph-floppy-disk text-lg"></i>
+                        <span id="questao-submit-label">Salvar Questão</span>
+                    </button>
+                </div>
+            </form>
+
+            <p id="questao-feedback" role="alert" class="hidden mt-5 px-4 py-3 rounded-xl border text-sm font-medium"></p>
+        </section>
+
+        <!-- Seção 3: Filtros e Listagem de Questões -->
+        <section class="bg-white rounded-[2rem] p-8 shadow-glass border border-gray-100 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-secondary/15 text-primary flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-database"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-poppins font-bold text-2xl text-carbon">Banco de Questões</h2>
+                        <p class="text-sm text-carbon/70">Filtre, edite ou desative questões (soft delete preserva histórico).</p>
+                    </div>
+                </div>
+                <span id="questoes-count-badge" class="px-3.5 py-1.5 rounded-full glass-dark text-xs font-semibold text-primary">
+                    0 questões
+                </span>
+            </div>
+
+            <!-- Barra de Filtros -->
+            <form id="filtro-form" class="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 rounded-2xl bg-cloud border border-gray-100 items-end">
+                <div class="md:col-span-4">
+                    <label for="filtro-categoria" class="block text-xs font-semibold text-carbon/70 mb-1">Categoria</label>
+                    <select id="filtro-categoria" name="categoria_id" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary">
+                        <option value="">Todas as categorias</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="filtro-ativa" class="block text-xs font-semibold text-carbon/70 mb-1">Status</label>
+                    <select id="filtro-ativa" name="ativa" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary">
+                        <option value="">Todas</option>
+                        <option value="true" selected>Somente ativas</option>
+                        <option value="false">Somente inativas</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-4">
+                    <label for="filtro-busca" class="block text-xs font-semibold text-carbon/70 mb-1">Buscar no enunciado</label>
+                    <div class="relative">
+                        <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-carbon/40"></i>
+                        <input id="filtro-busca" name="busca" type="text" placeholder="Ex.: declinação magnética, ISA..." class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 flex gap-2">
+                    <button type="submit" class="flex-1 bg-primary text-white px-4 py-2.5 rounded-xl font-poppins font-semibold text-sm hover:bg-primary/90 transition-colors">
+                        Filtrar
+                    </button>
+                    <button id="filtro-limpar-btn" type="button" title="Limpar filtros" class="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-carbon/70 hover:text-primary hover:border-primary transition-colors">
+                        <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                    </button>
+                </div>
+            </form>
+
+            <div id="lista-questoes" class="space-y-4"></div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full bg-carbon py-8 border-t border-white/10 relative z-20">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-white/50">
+            <p>&copy; 2026 Aeronáutica Simulados — Painel Administrativo.</p>
+            <a href="./index.html" class="hover:text-white transition-colors">Voltar ao site</a>
+        </div>
+    </footer>
+
+    <script src="./js/navbar.js"></script>
+    <script type="module" src="./js/admin.js"></script>
+</body>
+</html>
