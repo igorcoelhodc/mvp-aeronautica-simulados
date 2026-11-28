@@ -74,45 +74,8 @@
     <div class="blob bg-primary/40 w-96 h-96 top-[-10%] left-[-10%]"></div>
     <div class="blob bg-secondary/40 w-80 h-80 top-[20%] right-[-5%]"></div>
 
-    <!-- Navegação (Navbar) -->
-    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 py-4">
-        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
-            <a href="./index.html" class="flex items-center gap-2 group">
-                <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform">
-                    <i class="ph-bold ph-airplane-tilt text-2xl"></i>
-                </div>
-                <span class="font-poppins font-bold text-xl text-carbon tracking-tight">
-                    Aeronáutica<span class="text-primary">Simulados</span>
-                </span>
-            </a>
-
-            <div class="hidden md:flex items-center gap-8 font-medium">
-                <a href="#recursos" class="hover:text-primary transition-colors">Recursos</a>
-                <a href="#metodologia" class="hover:text-primary transition-colors">Metodologia</a>
-                <a href="#planos" class="hover:text-primary transition-colors">Planos</a>
-            </div>
-
-            <div class="hidden md:block">
-                <a href="./login.html" class="bg-accent text-white px-6 py-2.5 rounded-full font-poppins font-semibold shadow-lg shadow-accent/30 hover:shadow-glow hover:-translate-y-0.5 transition-all">
-                    Começar Grátis
-                </a>
-            </div>
-
-            <button id="mobile-menu-btn" class="md:hidden text-carbon text-3xl focus:outline-none">
-                <i class="ph ph-list"></i>
-            </button>
-        </div>
-
-        <!-- Menu Mobile -->
-        <div id="mobile-menu" class="hidden absolute top-full left-0 w-full glass flex-col px-6 py-4 gap-4 md:hidden shadow-glass border-t border-white/20">
-            <a href="#recursos" class="font-medium text-lg hover:text-primary">Recursos</a>
-            <a href="#metodologia" class="font-medium text-lg hover:text-primary">Metodologia</a>
-            <a href="#planos" class="font-medium text-lg hover:text-primary">Planos</a>
-            <a href="./login.html" class="bg-accent text-white text-center px-6 py-3 rounded-xl font-poppins font-semibold w-full mt-2">
-                Começar Grátis
-            </a>
-        </div>
-    </nav>
+    <!-- Navegação Padronizada -->
+    <header id="app-navbar" data-page="index"></header>
 
     <!-- Hero Section -->
     <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden z-10">
@@ -287,6 +250,6 @@
         </div>
     </footer>
 
-    <script src="./js/navbar.js"></script>
+    <script type="module" src="./js/navbar.js"></script>
 </body>
 </html>

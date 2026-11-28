@@ -43,23 +43,8 @@
     <div class="blob bg-primary/40 w-96 h-96 top-[-10%] left-[-10%]"></div>
     <div class="blob bg-secondary/40 w-80 h-80 bottom-[5%] right-[-5%]"></div>
 
-    <!-- Navegação -->
-    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 py-4">
-        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
-            <a href="./index.html" class="flex items-center gap-2 group">
-                <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform">
-                    <i class="ph-bold ph-airplane-tilt text-2xl"></i>
-                </div>
-                <span class="font-poppins font-bold text-xl text-carbon tracking-tight">
-                    Aeronáutica<span class="text-primary">Simulados</span>
-                </span>
-            </a>
-
-            <a href="./index.html" class="text-sm font-medium text-carbon/80 hover:text-primary transition-colors flex items-center gap-2">
-                <i class="ph-bold ph-arrow-left"></i> Voltar ao início
-            </a>
-        </div>
-    </nav>
+    <!-- Navegação Padronizada -->
+    <header id="app-navbar" data-page="login"></header>
 
     <!-- Conteúdo Principal -->
     <main class="relative z-10 flex-1 flex items-center justify-center px-6 pt-28 pb-16">
@@ -187,7 +172,7 @@
         </div>
     </main>
 
-    <script src="./js/navbar.js"></script>
+    <script type="module" src="./js/navbar.js"></script>
     <script type="module" src="./js/auth.js"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 // auth.js — Lógica das abas de Login/Cadastro e validação de sessão (/api/auth/me)
 
 import { apiRequest, clearToken, getToken, setToken } from './api.js';
+import { initNavbar } from './navbar.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const authCard = document.getElementById('auth-card');
@@ -144,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       form?.reset();
       setMode('login');
       showAuthForm();
+      initNavbar();
       setFeedback('Você saiu da sua conta.', 'success');
     });
   }
@@ -190,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (usuario?.perfil === 'ADMIN') {
           showSession(usuario);
+          initNavbar();
         } else {
           window.location.href = './dashboard.html';
         }

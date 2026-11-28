@@ -41,46 +41,8 @@
     <div class="blob bg-primary/40 w-96 h-96 top-[-10%] left-[-10%]"></div>
     <div class="blob bg-secondary/40 w-80 h-80 top-[25%] right-[-5%]"></div>
 
-    <!-- Navegação -->
-    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 py-4">
-        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
-            <a href="./index.html" class="flex items-center gap-2 group">
-                <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform">
-                    <i class="ph-bold ph-airplane-tilt text-2xl"></i>
-                </div>
-                <span class="font-poppins font-bold text-xl text-carbon tracking-tight">
-                    Aeronáutica<span class="text-primary">Admin</span>
-                </span>
-            </a>
-
-            <div class="hidden md:flex items-center gap-6 font-medium">
-                <a href="./index.html" class="hover:text-primary transition-colors">Site</a>
-                <a href="#secao-categorias" class="hover:text-primary transition-colors">Categorias</a>
-                <a href="#secao-questao-form" class="hover:text-primary transition-colors">Questões</a>
-                <span id="admin-user-badge" class="hidden items-center gap-2 px-3.5 py-1.5 rounded-full glass-dark text-xs font-semibold text-primary">
-                    <i class="ph-fill ph-shield-check text-base"></i>
-                    <span id="admin-user-name">Admin</span>
-                </span>
-                <button id="admin-logout-btn" type="button" class="glass px-4 py-2 rounded-full font-poppins font-semibold text-sm text-carbon hover:text-accent transition-colors flex items-center gap-1.5">
-                    <i class="ph-bold ph-sign-out"></i> Sair
-                </button>
-            </div>
-
-            <button id="mobile-menu-btn" class="md:hidden text-carbon text-3xl focus:outline-none">
-                <i class="ph ph-list"></i>
-            </button>
-        </div>
-
-        <!-- Menu Mobile -->
-        <div id="mobile-menu" class="hidden absolute top-full left-0 w-full glass flex-col px-6 py-4 gap-4 md:hidden shadow-glass border-t border-white/20">
-            <a href="./index.html" class="font-medium text-lg hover:text-primary">Site</a>
-            <a href="#secao-categorias" class="font-medium text-lg hover:text-primary">Categorias</a>
-            <a href="#secao-questao-form" class="font-medium text-lg hover:text-primary">Questões</a>
-            <button id="admin-logout-btn-mobile" type="button" class="bg-accent text-white text-center px-6 py-3 rounded-xl font-poppins font-semibold w-full mt-2">
-                Sair
-            </button>
-        </div>
-    </nav>
+    <!-- Navegação Padronizada -->
+    <header id="app-navbar" data-page="admin"></header>
 
     <!-- Estado de Validação de Acesso -->
     <div id="admin-loading" class="relative z-10 flex-1 flex items-center justify-center px-6 pt-28 pb-16">
@@ -91,31 +53,98 @@
     </div>
 
     <!-- Conteúdo Principal (exibido somente após confirmação de perfil ADMIN em /api/auth/me) -->
-    <main id="admin-content" class="hidden relative z-10 flex-1 max-w-7xl w-full mx-auto px-6 pt-28 pb-16 space-y-10">
+    <main id="admin-content" class="hidden relative z-10 flex-1 max-w-7xl w-full mx-auto px-6 pt-28 pb-16 space-y-8">
 
         <!-- Cabeçalho -->
         <section class="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-dark text-primary font-medium text-xs border border-primary/20 mb-3">
                     <i class="ph-fill ph-seal-check text-base"></i>
-                    Curadoria Administrativa
+                    Curadoria e Gestão Administrativa
                 </div>
                 <h1 class="font-poppins font-extrabold text-3xl md:text-4xl text-carbon">
-                    Gestão de <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Categorias e Questões</span>
+                    Painel <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Administrativo</span>
                 </h1>
-                <p class="text-carbon/70 mt-1 text-sm md:text-base">Cadastre bancas/matérias, gerencie questões comentadas e desative itens preservando o histórico de simulados.</p>
+                <p class="text-carbon/70 mt-1 text-sm md:text-base">Escolha uma ferramenta abaixo para gerenciar categorias, questões comentadas ou contas de alunos.</p>
             </div>
         </section>
 
-        <!-- Seção 1: Categorias (Licença + Matéria) -->
-        <section id="secao-categorias" class="glass-dark rounded-[2rem] p-8 shadow-glass border border-white/60 bg-white/55 backdrop-blur-xl space-y-6">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
-                    <i class="ph-fill ph-folders"></i>
+        <!-- Menu por Cards de Ação Expansíveis -->
+        <section aria-label="Menu do painel administrativo" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: Categorias -->
+            <button type="button" data-admin-card="categorias" aria-expanded="false" class="admin-card text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                <div class="flex items-center justify-between gap-3 w-full">
+                    <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-folders"></i>
+                    </div>
+                    <span id="card-count-categorias" class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-poppins font-semibold">0</span>
                 </div>
                 <div>
-                    <h2 class="font-poppins font-bold text-2xl text-carbon">Categorias (Licença + Matéria)</h2>
-                    <p class="text-sm text-carbon/70">Crie novas combinações de licença ANAC e matéria para classificar o banco de questões.</p>
+                    <h2 class="font-poppins font-bold text-lg text-carbon">Categorias</h2>
+                    <p class="text-xs text-carbon/70 mt-1">Criar e consultar combinações de licença + matéria.</p>
+                </div>
+            </button>
+
+            <!-- Card 2: Nova Questão -->
+            <button type="button" data-admin-card="nova-questao" aria-expanded="false" class="admin-card text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                <div class="flex items-center justify-between gap-3 w-full">
+                    <div class="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-note-pencil"></i>
+                    </div>
+                    <span id="card-badge-questao" class="px-3 py-1 rounded-full bg-accent/15 text-accent text-xs font-poppins font-semibold">Cadastrar</span>
+                </div>
+                <div>
+                    <h2 class="font-poppins font-bold text-lg text-carbon">Nova Questão</h2>
+                    <p class="text-xs text-carbon/70 mt-1">Cadastrar ou editar questão comentada com imagens.</p>
+                </div>
+            </button>
+
+            <!-- Card 3: Banco de Questões -->
+            <button type="button" data-admin-card="banco-questoes" aria-expanded="false" class="admin-card text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                <div class="flex items-center justify-between gap-3 w-full">
+                    <div class="w-12 h-12 rounded-2xl bg-secondary/15 text-primary flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-database"></i>
+                    </div>
+                    <span id="card-count-questoes" class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-poppins font-semibold">0</span>
+                </div>
+                <div>
+                    <h2 class="font-poppins font-bold text-lg text-carbon">Banco de Questões</h2>
+                    <p class="text-xs text-carbon/70 mt-1">Filtrar, editar, ativar e desativar questões.</p>
+                </div>
+            </button>
+
+            <!-- Card 4: Alunos -->
+            <button type="button" data-admin-card="alunos" aria-expanded="false" class="admin-card text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                <div class="flex items-center justify-between gap-3 w-full">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-users-three"></i>
+                    </div>
+                    <span id="card-count-alunos" class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-poppins font-semibold">0</span>
+                </div>
+                <div>
+                    <h2 class="font-poppins font-bold text-lg text-carbon">Alunos</h2>
+                    <p class="text-xs text-carbon/70 mt-1">Buscar contas de alunos e redefinir senhas.</p>
+                </div>
+            </button>
+        </section>
+
+        <!-- Placeholder quando nenhum card está expandido -->
+        <div id="admin-empty-hint" class="glass rounded-[2rem] p-8 text-center border border-dashed border-primary/25 text-carbon/70 text-sm">
+            <i class="ph-duotone ph-hand-pointing text-3xl text-primary/70 mb-2 block"></i>
+            Clique em um dos cards acima para expandir a ferramenta desejada.
+        </div>
+
+        <!-- PAINEL 1: Categorias (Licença + Matéria) -->
+        <section id="painel-categorias" data-admin-panel="categorias" class="hidden admin-panel-enter glass-dark rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/60 backdrop-blur-xl space-y-6">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-folders"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-poppins font-bold text-2xl text-carbon">Categorias (Licença + Matéria)</h2>
+                        <p class="text-sm text-carbon/70">Crie novas combinações de licença ANAC e matéria para classificar o banco de questões.</p>
+                    </div>
                 </div>
             </div>
 
@@ -155,8 +184,8 @@
             </div>
         </section>
 
-        <!-- Seção 2: Formulário CRUD de Questões Comentadas -->
-        <section id="secao-questao-form" class="glass-dark rounded-[2rem] p-8 shadow-glass border border-white/60 bg-white/55 backdrop-blur-xl">
+        <!-- PAINEL 2: Formulário de Cadastro / Edição de Questões Comentadas -->
+        <section id="painel-nova-questao" data-admin-panel="nova-questao" class="hidden admin-panel-enter glass-dark rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/60 backdrop-blur-xl">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-2xl">
@@ -164,7 +193,7 @@
                     </div>
                     <div>
                         <h2 id="questao-form-title" class="font-poppins font-bold text-2xl text-carbon">Cadastrar Questão Comentada</h2>
-                        <p class="text-sm text-carbon/70">Preencha o enunciado, as quatro alternativas (A–D), o gabarito e o comentário técnico.</p>
+                        <p class="text-sm text-carbon/70">Preencha o enunciado, as quatro alternativas (A–D), o gabarito, o comentário técnico e imagens opcionais.</p>
                     </div>
                 </div>
 
@@ -324,8 +353,8 @@
             <p id="questao-feedback" role="alert" class="hidden mt-5 px-4 py-3 rounded-xl border text-sm font-medium"></p>
         </section>
 
-        <!-- Seção 3: Filtros e Listagem de Questões -->
-        <section class="bg-white rounded-[2rem] p-8 shadow-glass border border-gray-100 space-y-6">
+        <!-- PAINEL 3: Banco de Questões (Listagem, Filtros, Editar e Ativar/Desativar) -->
+        <section id="painel-banco-questoes" data-admin-panel="banco-questoes" class="hidden admin-panel-enter bg-white rounded-[2rem] p-6 sm:p-8 shadow-glass border border-gray-100 space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-2xl bg-secondary/15 text-primary flex items-center justify-center text-2xl">
@@ -333,7 +362,7 @@
                     </div>
                     <div>
                         <h2 class="font-poppins font-bold text-2xl text-carbon">Banco de Questões</h2>
-                        <p class="text-sm text-carbon/70">Filtre, edite ou desative questões (soft delete preserva histórico).</p>
+                        <p class="text-sm text-carbon/70">Filtre, edite, reative ou desative questões (soft delete preserva histórico).</p>
                     </div>
                 </div>
                 <span id="questoes-count-badge" class="px-3.5 py-1.5 rounded-full glass-dark text-xs font-semibold text-primary">
@@ -377,10 +406,104 @@
                 </div>
             </form>
 
+            <p id="banco-feedback" role="alert" class="hidden px-4 py-3 rounded-xl border text-sm font-medium"></p>
+
             <div id="lista-questoes" class="space-y-4"></div>
         </section>
 
+        <!-- PAINEL 4: Gestão de Alunos e Reset de Senha -->
+        <section id="painel-alunos" data-admin-panel="alunos" class="hidden admin-panel-enter bg-white rounded-[2rem] p-6 sm:p-8 shadow-glass border border-gray-100 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-users-three"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-poppins font-bold text-2xl text-carbon">Gestão de Alunos</h2>
+                        <p class="text-sm text-carbon/70">Pesquise contas de alunos por nome ou e-mail e redefina senhas com segurança.</p>
+                    </div>
+                </div>
+                <span id="alunos-count-badge" class="px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                    0 alunos
+                </span>
+            </div>
+
+            <!-- Busca de Alunos -->
+            <form id="alunos-filtro-form" class="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-cloud border border-gray-100">
+                <div class="relative flex-1">
+                    <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-carbon/40 text-lg"></i>
+                    <input id="alunos-busca" name="q" type="text" placeholder="Buscar aluno por nome ou e-mail..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="bg-primary text-white px-5 py-2.5 rounded-xl font-poppins font-semibold text-sm hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5">
+                        <i class="ph-bold ph-magnifying-glass"></i> Buscar
+                    </button>
+                    <button id="alunos-limpar-btn" type="button" title="Limpar busca" class="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-carbon/70 hover:text-primary hover:border-primary transition-colors">
+                        <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                    </button>
+                </div>
+            </form>
+
+            <p id="alunos-feedback" role="alert" class="hidden px-4 py-3 rounded-xl border text-sm font-medium"></p>
+
+            <div id="lista-alunos" class="space-y-3"></div>
+        </section>
+
     </main>
+
+    <!-- Modal de Reset de Senha do Aluno -->
+    <div id="reset-senha-modal" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title" class="hidden fixed inset-0 z-[100] bg-carbon/75 backdrop-blur-md items-center justify-center p-4 sm:p-6">
+        <div class="relative w-full max-w-lg glass rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/90 space-y-5">
+            <button id="reset-modal-close" type="button" aria-label="Fechar modal" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-cloud text-carbon/70 hover:text-accent hover:bg-white transition-colors flex items-center justify-center">
+                <i class="ph-bold ph-x text-lg"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-accent/15 text-accent flex items-center justify-center text-2xl shrink-0">
+                    <i class="ph-fill ph-key"></i>
+                </div>
+                <div>
+                    <h3 id="reset-modal-title" class="font-poppins font-bold text-xl text-carbon">Resetar Senha do Aluno</h3>
+                    <p class="text-xs text-carbon/70">Defina uma nova senha (mínimo 8 caracteres) e copie para enviar ao aluno.</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl bg-cloud border border-gray-200/80 p-4 space-y-0.5">
+                <p id="reset-aluno-nome" class="font-poppins font-semibold text-sm text-carbon"></p>
+                <p id="reset-aluno-email" class="text-xs text-carbon/70"></p>
+            </div>
+
+            <form id="reset-senha-form" class="space-y-4">
+                <input type="hidden" id="reset-aluno-id">
+
+                <div>
+                    <label for="reset-nova-senha" class="block text-sm font-medium text-carbon mb-1.5">Nova Senha</label>
+                    <input id="reset-nova-senha" type="text" required minlength="8" autocomplete="off" placeholder="Mínimo de 8 caracteres" class="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 font-mono text-sm text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <button id="btn-gerar-senha" type="button" class="px-4 py-2 rounded-xl glass border border-primary/25 text-xs font-poppins font-semibold text-primary hover:bg-primary/10 transition-colors inline-flex items-center gap-1.5">
+                        <i class="ph-bold ph-sparkle text-sm"></i> Gerar senha forte
+                    </button>
+                    <button id="btn-copiar-senha" type="button" class="px-4 py-2 rounded-xl bg-white border border-gray-200 text-xs font-poppins font-semibold text-carbon hover:border-primary hover:text-primary transition-colors inline-flex items-center gap-1.5">
+                        <i class="ph-bold ph-copy text-sm"></i> <span id="btn-copiar-label">Copiar senha</span>
+                    </button>
+                </div>
+
+                <p id="reset-modal-feedback" role="alert" class="hidden px-4 py-3 rounded-xl border text-sm font-medium"></p>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button id="reset-modal-cancel" type="button" class="glass px-5 py-2.5 rounded-xl font-poppins font-semibold text-sm text-carbon hover:bg-white transition-all">
+                        Fechar
+                    </button>
+                    <button id="reset-submit-btn" type="submit" class="bg-accent text-white px-6 py-2.5 rounded-xl font-poppins font-semibold text-sm shadow-lg shadow-accent/30 hover:shadow-glow transition-all inline-flex items-center gap-2">
+                        <i class="ph-bold ph-check-circle text-base"></i>
+                        <span id="reset-submit-label">Confirmar Nova Senha</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="w-full bg-carbon py-8 border-t border-white/10 relative z-20">
@@ -390,7 +513,7 @@
         </div>
     </footer>
 
-    <script src="./js/navbar.js"></script>
+    <script type="module" src="./js/navbar.js"></script>
     <script type="module" src="./js/admin.js"></script>
 </body>
 </html>

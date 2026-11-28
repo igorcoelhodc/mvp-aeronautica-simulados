@@ -1,6 +1,7 @@
 // simulado.js — Execução de Simulado com Cronômetro Regressivo (30 min), Imagens + Zoom Lightbox e Gabarito Comentado
 
 import { apiRequest, getToken } from './api.js';
+import { setBeforeNavigateGuard } from './navbar.js';
 
 function isSafeUploadUrl(url) {
   return typeof url === 'string' && url.startsWith('/uploads/');
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const erroMsgEl = document.getElementById('simulado-erro-msg');
   const mainEl = document.getElementById('simulado-main');
 
+  const examHudBar = document.getElementById('exam-hud-bar');
   const progressBadge = document.getElementById('progress-badge');
   const timerBox = document.getElementById('timer-box');
   const timerDisplay = document.getElementById('timer-display');
@@ -56,6 +58,30 @@ document.addEventListener('DOMContentLoaded', () => {
   let remainingSeconds = 0;
   let timerInterval = null;
   let isFinalizing = false;
+  let isExamActive = false;
+
+  const handleBeforeUnload = (event) => {
+    if (!isExamActive) return;
+    event.preventDefault();
+    event.returnValue = '';
+  };
+
+  function enableExamNavigationGuard() {
+    isExamActive = true;
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    setBeforeNavigateGuard(() => {
+      if (!isExamActive) return true;
+      return window.confirm(
+        'Seu simulado está em andamento! Suas marcações estão salvas neste navegador e o cronômetro continuará correndo, podendo ser retomado pelo Dashboard. Deseja sair da tela do simulado agora?'
+      );
+    });
+  }
+
+  function disableExamNavigationGuard() {
+    isExamActive = false;
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    setBeforeNavigateGuard(null);
+  }
 
   function openLightbox(url, caption) {
     if (!isSafeUploadUrl(url) || !lightboxEl || !lightboxImg) return;
@@ -379,11 +405,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderResultado(simulado, revisao) {
     stopTimer();
+    disableExamNavigationGuard();
     clearLocalRespostas();
 
     modoExecucao?.classList.add('hidden');
-    timerBox?.classList.add('hidden');
-    progressBadge?.classList.add('hidden');
+    examHudBar?.classList.add('hidden');
     modoResultado?.classList.remove('hidden');
 
     const aprovado = Boolean(simulado.aprovado);
@@ -657,6 +683,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       modoExecucao?.classList.remove('hidden');
+      examHudBar?.classList.remove('hidden');
+      enableExamNavigationGuard();
       currentIndex = 0;
       renderCurrentQuestion();
 

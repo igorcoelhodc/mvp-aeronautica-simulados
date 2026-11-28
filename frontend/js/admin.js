@@ -1,6 +1,6 @@
-// admin.js — Curadoria Administrativa (Categorias + CRUD de Questões Comentadas com Imagens)
+// admin.js — Painel Administrativo por Cards Expansíveis (Categorias, Questões com Imagens e Gestão de Alunos)
 
-import { apiRequest, apiUpload, clearToken, getToken } from './api.js';
+import { apiRequest, apiUpload, getToken } from './api.js';
 
 const IMAGE_FIELD_KEYS = [
   'enunciado_imagem_url',
@@ -18,13 +18,47 @@ function isSafeUploadUrl(url) {
   return typeof url === 'string' && url.startsWith('/uploads/');
 }
 
+function generateStrongPassword(length = 14) {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const digits = '23456789';
+  const symbols = '!@#$%&*?';
+  const all = upper + lower + digits + symbols;
+
+  const pick = (charset) => {
+    const arr = new Uint32Array(1);
+    window.crypto.getRandomValues(arr);
+    return charset[arr[0] % charset.length];
+  };
+
+  const chars = [pick(upper), pick(lower), pick(digits), pick(symbols)];
+  while (chars.length < length) {
+    chars.push(pick(all));
+  }
+
+  // Embaralhamento Fisher-Yates com crypto.getRandomValues
+  for (let i = chars.length - 1; i > 0; i -= 1) {
+    const arr = new Uint32Array(1);
+    window.crypto.getRandomValues(arr);
+    const j = arr[0] % (i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+
+  return chars.join('');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const loadingEl = document.getElementById('admin-loading');
   const contentEl = document.getElementById('admin-content');
-  const userBadge = document.getElementById('admin-user-badge');
-  const userNameEl = document.getElementById('admin-user-name');
-  const logoutBtn = document.getElementById('admin-logout-btn');
-  const logoutBtnMobile = document.getElementById('admin-logout-btn-mobile');
+  const emptyHintEl = document.getElementById('admin-empty-hint');
+
+  // Cards & Painéis expansíveis
+  const cardButtons = document.querySelectorAll('[data-admin-card]');
+  const panels = document.querySelectorAll('[data-admin-panel]');
+  const cardCountCategorias = document.getElementById('card-count-categorias');
+  const cardBadgeQuestao = document.getElementById('card-badge-questao');
+  const cardCountQuestoes = document.getElementById('card-count-questoes');
+  const cardCountAlunos = document.getElementById('card-count-alunos');
 
   // Categorias
   const categoriaForm = document.getElementById('categoria-form');
@@ -53,17 +87,43 @@ document.addEventListener('DOMContentLoaded', () => {
   const questaoSubmitLabel = document.getElementById('questao-submit-label');
   const questaoFeedback = document.getElementById('questao-feedback');
 
-  // Filtros e Listagem
+  // Filtros e Listagem de Questões
   const filtroForm = document.getElementById('filtro-form');
   const filtroCategoria = document.getElementById('filtro-categoria');
   const filtroAtiva = document.getElementById('filtro-ativa');
   const filtroBusca = document.getElementById('filtro-busca');
   const filtroLimparBtn = document.getElementById('filtro-limpar-btn');
   const questoesCountBadge = document.getElementById('questoes-count-badge');
+  const bancoFeedback = document.getElementById('banco-feedback');
   const listaQuestoesEl = document.getElementById('lista-questoes');
+
+  // Gestão de Alunos
+  const alunosFiltroForm = document.getElementById('alunos-filtro-form');
+  const alunosBuscaInput = document.getElementById('alunos-busca');
+  const alunosLimparBtn = document.getElementById('alunos-limpar-btn');
+  const alunosCountBadge = document.getElementById('alunos-count-badge');
+  const alunosFeedback = document.getElementById('alunos-feedback');
+  const listaAlunosEl = document.getElementById('lista-alunos');
+
+  // Modal Reset de Senha
+  const resetModal = document.getElementById('reset-senha-modal');
+  const resetModalClose = document.getElementById('reset-modal-close');
+  const resetModalCancel = document.getElementById('reset-modal-cancel');
+  const resetAlunoIdInput = document.getElementById('reset-aluno-id');
+  const resetAlunoNomeEl = document.getElementById('reset-aluno-nome');
+  const resetAlunoEmailEl = document.getElementById('reset-aluno-email');
+  const resetSenhaForm = document.getElementById('reset-senha-form');
+  const resetNovaSenhaInput = document.getElementById('reset-nova-senha');
+  const btnGerarSenha = document.getElementById('btn-gerar-senha');
+  const btnCopiarSenha = document.getElementById('btn-copiar-senha');
+  const btnCopiarLabel = document.getElementById('btn-copiar-label');
+  const resetModalFeedback = document.getElementById('reset-modal-feedback');
+  const resetSubmitBtn = document.getElementById('reset-submit-btn');
+  const resetSubmitLabel = document.getElementById('reset-submit-label');
 
   const imageWidgets = new Map();
   let activeUploadsCount = 0;
+  let activePanelKey = null;
 
   function showFeedback(el, message, type = 'error') {
     if (!el) return;
@@ -89,14 +149,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function handleLogout() {
-    clearToken();
-    window.location.href = './login.html';
+  function formatDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  logoutBtn?.addEventListener('click', handleLogout);
-  logoutBtnMobile?.addEventListener('click', handleLogout);
+  // Controle dos Cards Expansíveis
+  function setActivePanel(panelKey, { allowToggleClose = false, scrollToPanel = false } = {}) {
+    if (allowToggleClose && activePanelKey === panelKey) {
+      activePanelKey = null;
+    } else {
+      activePanelKey = panelKey;
+    }
 
+    cardButtons.forEach((btn) => {
+      const isSelected = btn.dataset.adminCard === activePanelKey;
+      btn.classList.toggle('admin-card-active', isSelected);
+      btn.setAttribute('aria-expanded', String(isSelected));
+    });
+
+    let targetPanelEl = null;
+    panels.forEach((panel) => {
+      const isSelected = panel.dataset.adminPanel === activePanelKey;
+      panel.classList.toggle('hidden', !isSelected);
+      if (isSelected) targetPanelEl = panel;
+    });
+
+    emptyHintEl?.classList.toggle('hidden', Boolean(activePanelKey));
+
+    if (scrollToPanel && targetPanelEl) {
+      targetPanelEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  cardButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.adminCard;
+      setActivePanel(target, { allowToggleClose: true, scrollToPanel: false });
+      if (activePanelKey === 'alunos') {
+        loadAlunos().catch((err) => showFeedback(alunosFeedback, err.message || 'Erro ao carregar alunos.'));
+      }
+    });
+  });
+
+  // Uploaders de Imagem
   function setWidgetStatus(widget, message, isError = false) {
     if (!widget?.statusEl) return;
     widget.statusEl.textContent = message || '';
@@ -169,9 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       imageWidgets.set(fieldKey, widget);
 
-      triggerBtn.addEventListener('click', () => {
-        fileInput.click();
-      });
+      triggerBtn.addEventListener('click', () => fileInput.click());
 
       removeBtn?.addEventListener('click', () => {
         fileInput.value = '';
@@ -224,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (questaoIdInput) questaoIdInput.value = '';
     if (questaoFormTitle) questaoFormTitle.textContent = 'Cadastrar Questão Comentada';
     if (questaoSubmitLabel) questaoSubmitLabel.textContent = 'Salvar Questão';
+    if (cardBadgeQuestao) cardBadgeQuestao.textContent = 'Cadastrar';
     questaoEditBadge?.classList.add('hidden');
     questaoEditBadge?.classList.remove('inline-flex');
     questaoCancelBtn?.classList.add('hidden');
@@ -247,12 +344,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (questaoFormTitle) questaoFormTitle.textContent = 'Editar Questão Comentada';
     if (questaoSubmitLabel) questaoSubmitLabel.textContent = 'Atualizar Questão';
+    if (cardBadgeQuestao) cardBadgeQuestao.textContent = 'Editando';
     questaoEditBadge?.classList.remove('hidden');
     questaoEditBadge?.classList.add('inline-flex');
     questaoCancelBtn?.classList.remove('hidden');
     showFeedback(questaoFeedback, '');
 
-    document.getElementById('secao-questao-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Expande automaticamente o painel "Nova Questão" e rola suavemente até o formulário
+    setActivePanel('nova-questao', { allowToggleClose: false, scrollToPanel: true });
   }
 
   questaoCancelBtn?.addEventListener('click', () => {
@@ -275,7 +374,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return img;
   }
 
+  // Renderização de Categorias
   function renderCategorias(categorias) {
+    if (cardCountCategorias) cardCountCategorias.textContent = String(categorias.length);
+
     const selectedFormVal = categoriaIdSelect?.value || '';
     const selectedFilterVal = filtroCategoria?.value || '';
 
@@ -329,14 +431,17 @@ document.addEventListener('DOMContentLoaded', () => {
         lic.className = 'text-primary font-poppins';
         lic.textContent = cat.licenca;
 
-        const sep = document.createTextNode(` • ${cat.materia}`);
+        const qtd = Number(cat.total_questoes_ativas ?? 0);
+        const sep = document.createTextNode(` • ${cat.materia} (${qtd})`);
         chip.append(lic, sep);
         categoriasChips.appendChild(chip);
       });
     }
   }
 
+  // Renderização de Questões
   function renderQuestoes(questoes) {
+    if (cardCountQuestoes) cardCountQuestoes.textContent = String(questoes.length);
     if (questoesCountBadge) {
       questoesCountBadge.textContent = `${questoes.length} ${questoes.length === 1 ? 'questão' : 'questões'}`;
     }
@@ -357,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const sub = document.createElement('p');
       sub.className = 'text-sm text-carbon/65 mt-1';
-      sub.textContent = 'Ajuste os filtros ou cadastre uma nova questão acima.';
+      sub.textContent = 'Ajuste os filtros ou cadastre uma nova questão.';
 
       emptyBox.append(icon, title, sub);
       listaQuestoesEl.appendChild(emptyBox);
@@ -372,7 +477,6 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'bg-gray-50/80 border-gray-200 opacity-75'
       }`;
 
-      // Cabeçalho do card
       const header = document.createElement('div');
       header.className = 'flex flex-wrap items-center justify-between gap-3 mb-4';
 
@@ -426,11 +530,19 @@ document.addEventListener('DOMContentLoaded', () => {
         delBtn.append(delIcon, document.createTextNode('Desativar'));
         delBtn.addEventListener('click', () => handleDesativarQuestao(q.id));
         actions.appendChild(delBtn);
+      } else {
+        const reactivateBtn = document.createElement('button');
+        reactivateBtn.type = 'button';
+        reactivateBtn.className = 'px-3.5 py-1.5 rounded-xl bg-white border border-emerald-200 text-xs font-poppins font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1.5';
+        const actIcon = document.createElement('i');
+        actIcon.className = 'ph-bold ph-eye';
+        reactivateBtn.append(actIcon, document.createTextNode('Ativar'));
+        reactivateBtn.addEventListener('click', () => handleReativarQuestao(q));
+        actions.appendChild(reactivateBtn);
       }
 
       header.append(badges, actions);
 
-      // Enunciado + imagem opcional
       const enunciadoWrap = document.createElement('div');
       enunciadoWrap.className = 'mb-4';
 
@@ -442,7 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const enunThumb = createAdminThumb(q.enunciado_imagem_url, 'Imagem do enunciado', 'max-h-40');
       if (enunThumb) enunciadoWrap.appendChild(enunThumb);
 
-      // Alternativas + imagens opcionais
       const altsGrid = document.createElement('div');
       altsGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-4 text-sm';
 
@@ -473,7 +584,6 @@ document.addEventListener('DOMContentLoaded', () => {
         altsGrid.appendChild(altItem);
       });
 
-      // Comentário + imagem opcional
       const comentarioBox = document.createElement('div');
       comentarioBox.className = 'p-3.5 rounded-xl glass-dark text-xs sm:text-sm text-carbon/85 leading-relaxed';
 
@@ -492,6 +602,180 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Renderização de Alunos (100% DOM seguro contra XSS)
+  function renderAlunos(alunos) {
+    if (cardCountAlunos) cardCountAlunos.textContent = String(alunos.length);
+    if (alunosCountBadge) {
+      alunosCountBadge.textContent = `${alunos.length} ${alunos.length === 1 ? 'aluno' : 'alunos'}`;
+    }
+
+    if (!listaAlunosEl) return;
+    listaAlunosEl.replaceChildren();
+
+    if (!alunos.length) {
+      const emptyBox = document.createElement('div');
+      emptyBox.className = 'rounded-2xl bg-cloud border border-dashed border-primary/25 p-10 text-center';
+
+      const icon = document.createElement('i');
+      icon.className = 'ph-duotone ph-users-three text-4xl text-primary/60 mb-3 block';
+
+      const title = document.createElement('p');
+      title.className = 'font-poppins font-semibold text-carbon';
+      title.textContent = 'Nenhum aluno encontrado';
+
+      const sub = document.createElement('p');
+      sub.className = 'text-sm text-carbon/65 mt-1';
+      sub.textContent = 'Tente outro termo de busca ou aguarde novos cadastros.';
+
+      emptyBox.append(icon, title, sub);
+      listaAlunosEl.appendChild(emptyBox);
+      return;
+    }
+
+    alunos.forEach((aluno) => {
+      const row = document.createElement('article');
+      row.className =
+        'rounded-2xl bg-cloud border border-gray-200/80 hover:border-primary/40 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all';
+
+      const left = document.createElement('div');
+      left.className = 'space-y-1 min-w-0';
+
+      const nameLine = document.createElement('div');
+      nameLine.className = 'flex flex-wrap items-center gap-2';
+
+      const nameEl = document.createElement('h3');
+      nameEl.className = 'font-poppins font-semibold text-base text-carbon truncate';
+      nameEl.textContent = aluno.nome;
+
+      const simsBadge = document.createElement('span');
+      simsBadge.className = 'px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-poppins font-semibold';
+      const totalSims = Number(aluno.total_simulados ?? 0);
+      simsBadge.textContent = `${totalSims} ${totalSims === 1 ? 'simulado' : 'simulados'}`;
+
+      nameLine.append(nameEl, simsBadge);
+
+      const emailEl = document.createElement('p');
+      emailEl.className = 'text-sm text-carbon/75 break-all';
+      emailEl.textContent = aluno.email;
+
+      const metaEl = document.createElement('p');
+      metaEl.className = 'text-xs text-carbon/60';
+      const finalizados = Number(aluno.simulados_finalizados ?? 0);
+      metaEl.textContent = `Cadastro em ${formatDate(aluno.criado_em)} • ${finalizados} ${
+        finalizados === 1 ? 'finalizado' : 'finalizados'
+      }`;
+
+      left.append(nameLine, emailEl, metaEl);
+
+      const resetBtn = document.createElement('button');
+      resetBtn.type = 'button';
+      resetBtn.className =
+        'px-4 py-2.5 rounded-xl bg-white border border-accent/40 text-xs sm:text-sm font-poppins font-semibold text-accent hover:bg-accent hover:text-white transition-all inline-flex items-center justify-center gap-1.5 shrink-0';
+      const keyIcon = document.createElement('i');
+      keyIcon.className = 'ph-bold ph-key text-base';
+      resetBtn.append(keyIcon, document.createTextNode('Resetar Senha'));
+      resetBtn.addEventListener('click', () => openResetSenhaModal(aluno));
+
+      row.append(left, resetBtn);
+      listaAlunosEl.appendChild(row);
+    });
+  }
+
+  // Modal de Reset de Senha
+  function openResetSenhaModal(aluno) {
+    if (!resetModal || !aluno) return;
+    if (resetAlunoIdInput) resetAlunoIdInput.value = aluno.id;
+    if (resetAlunoNomeEl) resetAlunoNomeEl.textContent = aluno.nome;
+    if (resetAlunoEmailEl) resetAlunoEmailEl.textContent = aluno.email;
+    if (resetNovaSenhaInput) resetNovaSenhaInput.value = '';
+    if (btnCopiarLabel) btnCopiarLabel.textContent = 'Copiar senha';
+    showFeedback(resetModalFeedback, '');
+
+    resetModal.classList.remove('hidden');
+    resetModal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+    resetNovaSenhaInput?.focus();
+  }
+
+  function closeResetSenhaModal() {
+    if (!resetModal) return;
+    resetModal.classList.add('hidden');
+    resetModal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  resetModalClose?.addEventListener('click', closeResetSenhaModal);
+  resetModalCancel?.addEventListener('click', closeResetSenhaModal);
+  resetModal?.addEventListener('click', (event) => {
+    if (event.target === resetModal) closeResetSenhaModal();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && resetModal && !resetModal.classList.contains('hidden')) {
+      closeResetSenhaModal();
+    }
+  });
+
+  btnGerarSenha?.addEventListener('click', () => {
+    if (!resetNovaSenhaInput) return;
+    resetNovaSenhaInput.value = generateStrongPassword(14);
+    if (btnCopiarLabel) btnCopiarLabel.textContent = 'Copiar senha';
+    showFeedback(resetModalFeedback, '');
+  });
+
+  btnCopiarSenha?.addEventListener('click', async () => {
+    const senha = resetNovaSenhaInput?.value || '';
+    if (!senha) {
+      showFeedback(resetModalFeedback, 'Gere ou digite uma senha antes de copiar.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(senha);
+      if (btnCopiarLabel) btnCopiarLabel.textContent = 'Copiada!';
+      setTimeout(() => {
+        if (btnCopiarLabel) btnCopiarLabel.textContent = 'Copiar senha';
+      }, 2500);
+    } catch {
+      resetNovaSenhaInput?.select();
+      showFeedback(resetModalFeedback, 'Selecione e copie a senha manualmente (Ctrl+C).');
+    }
+  });
+
+  resetSenhaForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showFeedback(resetModalFeedback, '');
+
+    const alunoId = resetAlunoIdInput?.value.trim() || '';
+    const novaSenha = resetNovaSenhaInput?.value || '';
+
+    if (novaSenha.length < 8) {
+      showFeedback(resetModalFeedback, 'A nova senha deve ter pelo menos 8 caracteres.');
+      resetNovaSenhaInput?.focus();
+      return;
+    }
+
+    if (resetSubmitBtn) resetSubmitBtn.disabled = true;
+    if (resetSubmitLabel) resetSubmitLabel.textContent = 'Atualizando...';
+
+    try {
+      const data = await apiRequest(`/admin/alunos/${encodeURIComponent(alunoId)}/reset-senha`, {
+        method: 'POST',
+        body: JSON.stringify({ nova_senha: novaSenha }),
+      });
+      showFeedback(
+        resetModalFeedback,
+        data?.message || 'Senha atualizada com sucesso! Copie a senha acima para enviar ao aluno.',
+        'success'
+      );
+    } catch (err) {
+      showFeedback(resetModalFeedback, err.message || 'Erro ao redefinir senha do aluno.');
+    } finally {
+      if (resetSubmitBtn) resetSubmitBtn.disabled = false;
+      if (resetSubmitLabel) resetSubmitLabel.textContent = 'Confirmar Nova Senha';
+    }
+  });
+
+  // Chamadas de API
   async function loadCategorias() {
     const data = await apiRequest('/categorias', { method: 'GET' });
     renderCategorias(data?.categorias || []);
@@ -508,21 +792,62 @@ document.addEventListener('DOMContentLoaded', () => {
     renderQuestoes(data?.questoes || []);
   }
 
+  async function loadAlunos() {
+    const params = new URLSearchParams();
+    const busca = alunosBuscaInput?.value.trim() || '';
+    if (busca) params.set('q', busca);
+
+    const qs = params.toString();
+    const data = await apiRequest(`/admin/alunos${qs ? `?${qs}` : ''}`, { method: 'GET' });
+    renderAlunos(data?.alunos || []);
+  }
+
   async function handleDesativarQuestao(id) {
     const confirmed = window.confirm(
       'Deseja desativar esta questão? Ela não será sorteada em novos simulados, mas permanecerá preservada no histórico de simulados já finalizados.'
     );
     if (!confirmed) return;
 
+    showFeedback(bancoFeedback, '');
     try {
       await apiRequest(`/admin/questoes/${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (questaoIdInput?.value === id) {
         resetQuestaoFormMode();
       }
-      showFeedback(questaoFeedback, 'Questão desativada com sucesso.', 'success');
-      await loadQuestoes();
+      showFeedback(bancoFeedback, 'Questão desativada com sucesso.', 'success');
+      await Promise.all([loadQuestoes(), loadCategorias()]);
     } catch (err) {
-      showFeedback(questaoFeedback, err.message || 'Erro ao desativar questão.');
+      showFeedback(bancoFeedback, err.message || 'Erro ao desativar questão.');
+    }
+  }
+
+  async function handleReativarQuestao(q) {
+    showFeedback(bancoFeedback, '');
+    try {
+      await apiRequest(`/admin/questoes/${encodeURIComponent(q.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          categoria_id: q.categoria_id,
+          enunciado: q.enunciado,
+          enunciado_imagem_url: q.enunciado_imagem_url || null,
+          alternativa_a: q.alternativa_a,
+          alternativa_a_imagem_url: q.alternativa_a_imagem_url || null,
+          alternativa_b: q.alternativa_b,
+          alternativa_b_imagem_url: q.alternativa_b_imagem_url || null,
+          alternativa_c: q.alternativa_c,
+          alternativa_c_imagem_url: q.alternativa_c_imagem_url || null,
+          alternativa_d: q.alternativa_d,
+          alternativa_d_imagem_url: q.alternativa_d_imagem_url || null,
+          gabarito: q.gabarito,
+          comentario: q.comentario,
+          comentario_imagem_url: q.comentario_imagem_url || null,
+          ativa: true,
+        }),
+      });
+      showFeedback(bancoFeedback, 'Questão reativada com sucesso.', 'success');
+      await Promise.all([loadQuestoes(), loadCategorias()]);
+    } catch (err) {
+      showFeedback(bancoFeedback, err.message || 'Erro ao reativar questão.');
     }
   }
 
@@ -603,7 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       resetQuestaoFormMode();
-      await loadQuestoes();
+      await Promise.all([loadQuestoes(), loadCategorias()]);
     } catch (err) {
       showFeedback(questaoFeedback, err.message || 'Erro ao salvar questão.');
     } finally {
@@ -613,10 +938,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   filtroForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    showFeedback(bancoFeedback, '');
     try {
       await loadQuestoes();
     } catch (err) {
-      showFeedback(questaoFeedback, err.message || 'Erro ao filtrar questões.');
+      showFeedback(bancoFeedback, err.message || 'Erro ao filtrar questões.');
     }
   });
 
@@ -627,7 +953,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filtroCategoria) filtroCategoria.value = '';
     if (filtroAtiva) filtroAtiva.value = 'true';
     if (filtroBusca) filtroBusca.value = '';
+    showFeedback(bancoFeedback, '');
     loadQuestoes().catch(() => {});
+  });
+
+  alunosFiltroForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showFeedback(alunosFeedback, '');
+    try {
+      await loadAlunos();
+    } catch (err) {
+      showFeedback(alunosFeedback, err.message || 'Erro ao buscar alunos.');
+    }
+  });
+
+  alunosLimparBtn?.addEventListener('click', () => {
+    if (alunosBuscaInput) alunosBuscaInput.value = '';
+    showFeedback(alunosFeedback, '');
+    loadAlunos().catch(() => {});
   });
 
   async function initAdminPage() {
@@ -644,17 +987,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      if (userNameEl) userNameEl.textContent = usuario.nome;
-      userBadge?.classList.remove('hidden');
-      userBadge?.classList.add('inline-flex');
-
       initImageWidgets();
 
       loadingEl?.classList.add('hidden');
       contentEl?.classList.remove('hidden');
 
-      await loadCategorias();
-      await loadQuestoes();
+      await Promise.all([loadCategorias(), loadQuestoes(), loadAlunos()]);
     } catch {
       window.location.href = './login.html';
     }

@@ -1,18 +1,12 @@
 // dashboard.js — Painel do Aluno (Seleção de Banca/Matéria, Resumo de Desempenho e Histórico)
 
-import { apiRequest, clearToken, getToken } from './api.js';
+import { apiRequest, getToken } from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const loadingEl = document.getElementById('dashboard-loading');
   const contentEl = document.getElementById('dashboard-content');
 
-  const userBadge = document.getElementById('dash-user-badge');
-  const userNameEl = document.getElementById('dash-user-name');
   const welcomeNameEl = document.getElementById('welcome-name');
-  const navAdminLink = document.getElementById('nav-admin-link');
-  const navAdminLinkMobile = document.getElementById('nav-admin-link-mobile');
-  const logoutBtn = document.getElementById('dash-logout-btn');
-  const logoutBtnMobile = document.getElementById('dash-logout-btn-mobile');
 
   const statSimuladosEl = document.getElementById('stat-simulados');
   const statMediaEl = document.getElementById('stat-media');
@@ -32,14 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const historicoContainer = document.getElementById('historico-container');
 
   let todasCategorias = [];
-
-  function handleLogout() {
-    clearToken();
-    window.location.href = './login.html';
-  }
-
-  logoutBtn?.addEventListener('click', handleLogout);
-  logoutBtnMobile?.addEventListener('click', handleLogout);
 
   function showFeedback(message, type = 'error') {
     if (!feedbackEl) return;
@@ -407,15 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const firstName = usuario.nome.split(' ')[0] || usuario.nome;
       if (welcomeNameEl) welcomeNameEl.textContent = firstName;
-      if (userNameEl) userNameEl.textContent = usuario.nome;
-      userBadge?.classList.remove('hidden');
-      userBadge?.classList.add('inline-flex');
-
-      if (usuario.perfil === 'ADMIN') {
-        navAdminLink?.classList.remove('hidden');
-        navAdminLink?.classList.add('inline-flex');
-        navAdminLinkMobile?.classList.remove('hidden');
-      }
 
       const [catsRes, simsRes] = await Promise.all([
         apiRequest('/categorias', { method: 'GET' }),

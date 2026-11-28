@@ -25,6 +25,60 @@ body {
   border: 1px solid rgba(0, 229, 255, 0.2);
 }
 
+/* Navbar padronizada */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #2C3E50;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.nav-link:hover {
+  color: #1E88E5;
+  background-color: rgba(30, 136, 229, 0.08);
+}
+
+.nav-link-active {
+  color: #1E88E5;
+  font-weight: 600;
+  background-color: rgba(30, 136, 229, 0.12);
+}
+
+/* Painel Admin — Cards expansíveis */
+.admin-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.admin-card:hover {
+  transform: translateY(-2px);
+}
+
+.admin-card-active {
+  border-color: #1E88E5 !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 12px 32px rgba(30, 136, 229, 0.18);
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-panel-enter {
+  animation: panelSlideIn 0.24s ease-out;
+}
+
 /* Animação Suave das Cartas de Navegação (Fundo) */
 @keyframes fadeChart {
   0% {

@@ -41,25 +41,8 @@
     <div class="blob bg-primary/40 w-96 h-96 top-[-10%] left-[-10%]"></div>
     <div class="blob bg-secondary/40 w-80 h-80 top-[30%] right-[-5%]"></div>
 
-    <!-- Barra Superior do Simulado -->
-    <nav id="navbar" class="fixed w-full z-50 glass shadow-sm transition-all duration-300 py-3">
-        <div class="max-w-5xl mx-auto px-6 flex justify-between items-center gap-4">
-            <a href="./dashboard.html" class="flex items-center gap-2 text-sm font-medium text-carbon hover:text-primary transition-colors">
-                <i class="ph-bold ph-arrow-left text-lg"></i>
-                <span>Voltar ao Dashboard</span>
-            </a>
-
-            <div class="flex items-center gap-3">
-                <span id="progress-badge" class="hidden text-xs font-semibold text-primary px-3.5 py-1.5 bg-primary/10 rounded-full">
-                    Questão 1 de 20
-                </span>
-                <div id="timer-box" class="hidden items-center gap-2 px-4 py-1.5 rounded-full glass-dark border border-primary/20 text-carbon font-poppins font-bold text-sm">
-                    <i class="ph-fill ph-timer text-accent text-lg"></i>
-                    <span id="timer-display">30:00</span>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- Navegação Padronizada -->
+    <header id="app-navbar" data-page="simulado"></header>
 
     <!-- Estado de Carregamento -->
     <div id="simulado-loading" class="relative z-10 flex-1 flex items-center justify-center px-6 pt-28 pb-16">
@@ -82,7 +65,18 @@
     </div>
 
     <!-- Conteúdo Principal -->
-    <main id="simulado-main" class="hidden relative z-10 flex-1 max-w-5xl w-full mx-auto px-6 pt-28 pb-16 space-y-6">
+    <main id="simulado-main" class="hidden relative z-10 flex-1 max-w-5xl w-full mx-auto px-6 pt-24 pb-16 space-y-6">
+
+        <!-- Barra de Status da Prova (Cronômetro + Progresso) -->
+        <div id="exam-hud-bar" class="hidden sticky top-[76px] z-30 glass rounded-2xl px-4 sm:px-6 py-3 shadow-sm border border-white/60 flex flex-wrap items-center justify-between gap-3">
+            <span id="progress-badge" class="text-xs sm:text-sm font-semibold text-primary px-3.5 py-1.5 bg-primary/10 rounded-full">
+                Questão 1 de 20
+            </span>
+            <div id="timer-box" class="flex items-center gap-2 px-4 py-1.5 rounded-full glass-dark border border-primary/20 text-carbon font-poppins font-bold text-sm">
+                <i class="ph-fill ph-timer text-accent text-lg"></i>
+                <span id="timer-display">30:00</span>
+            </div>
+        </div>
 
         <!-- Aviso opcional (ex.: categoria com menos de 20 questões ou tempo esgotado) -->
         <div id="simulado-aviso" class="hidden px-4 py-3 rounded-2xl border bg-amber-50 border-amber-200 text-amber-800 text-sm font-medium flex items-center gap-2.5"></div>
@@ -201,6 +195,7 @@
         </div>
     </div>
 
+    <script type="module" src="./js/navbar.js"></script>
     <script type="module" src="./js/simulado.js"></script>
 </body>
 </html>

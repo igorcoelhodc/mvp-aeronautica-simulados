@@ -18,6 +18,7 @@ www.{$DOMAIN} {
 
 	handle {
 		root * /srv/frontend
+		header Cache-Control "no-cache"
 		file_server
 	}
 }

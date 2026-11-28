@@ -77,6 +77,8 @@ func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string)
 			r.Post("/questoes", curadoriaHandler.CreateQuestao)
 			r.Put("/questoes/{id}", curadoriaHandler.UpdateQuestao)
 			r.Delete("/questoes/{id}", curadoriaHandler.DeleteQuestao)
+			r.Get("/alunos", curadoriaHandler.ListAlunos)
+			r.Post("/alunos/{id}/reset-senha", curadoriaHandler.ResetSenhaAluno)
 		})
 	})
 

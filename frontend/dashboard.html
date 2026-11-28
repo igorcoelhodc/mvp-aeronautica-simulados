@@ -43,53 +43,8 @@
     <div class="blob bg-primary/40 w-96 h-96 top-[-10%] left-[-10%]"></div>
     <div class="blob bg-secondary/40 w-80 h-80 top-[20%] right-[-5%]"></div>
 
-    <!-- Navegação -->
-    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 py-4">
-        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
-            <a href="./index.html" class="flex items-center gap-2 group">
-                <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform">
-                    <i class="ph-bold ph-airplane-tilt text-2xl"></i>
-                </div>
-                <span class="font-poppins font-bold text-xl text-carbon tracking-tight">
-                    Aeronáutica<span class="text-primary">Simulados</span>
-                </span>
-            </a>
-
-            <div class="hidden md:flex items-center gap-6 font-medium">
-                <a href="./dashboard.html" class="text-primary font-semibold">Dashboard</a>
-                <a href="#novo-simulado" class="hover:text-primary transition-colors">Novo Simulado</a>
-                <a href="#historico" class="hover:text-primary transition-colors">Histórico</a>
-                <a id="nav-admin-link" href="./admin.html" class="hidden hover:text-primary transition-colors items-center gap-1.5">
-                    <i class="ph-bold ph-shield-check text-primary"></i> Admin
-                </a>
-            </div>
-
-            <div class="hidden md:flex items-center gap-3">
-                <span id="dash-user-badge" class="hidden items-center gap-2 px-3.5 py-1.5 rounded-full glass-dark text-xs font-semibold text-primary">
-                    <i class="ph-fill ph-user-circle text-base"></i>
-                    <span id="dash-user-name">Aluno</span>
-                </span>
-                <button id="dash-logout-btn" type="button" class="glass px-5 py-2 rounded-full font-poppins font-semibold text-sm text-carbon hover:text-accent transition-all flex items-center gap-1.5">
-                    <i class="ph-bold ph-sign-out"></i> Sair
-                </button>
-            </div>
-
-            <button id="mobile-menu-btn" class="md:hidden text-carbon text-3xl focus:outline-none">
-                <i class="ph ph-list"></i>
-            </button>
-        </div>
-
-        <!-- Menu Mobile -->
-        <div id="mobile-menu" class="hidden absolute top-full left-0 w-full glass flex-col px-6 py-4 gap-4 md:hidden shadow-glass border-t border-white/20">
-            <a href="./dashboard.html" class="font-semibold text-lg text-primary">Dashboard</a>
-            <a href="#novo-simulado" class="font-medium text-lg hover:text-primary">Novo Simulado</a>
-            <a href="#historico" class="font-medium text-lg hover:text-primary">Histórico</a>
-            <a id="nav-admin-link-mobile" href="./admin.html" class="hidden font-medium text-lg hover:text-primary">Painel Admin</a>
-            <button id="dash-logout-btn-mobile" type="button" class="bg-accent text-white text-center px-6 py-3 rounded-xl font-poppins font-semibold w-full mt-2">
-                Sair
-            </button>
-        </div>
-    </nav>
+    <!-- Navegação Padronizada -->
+    <header id="app-navbar" data-page="dashboard"></header>
 
     <!-- Estado de Validação de Sessão -->
     <div id="dashboard-loading" class="relative z-10 flex-1 flex items-center justify-center px-6 pt-28 pb-16">
@@ -216,7 +171,7 @@
         </div>
     </footer>
 
-    <script src="./js/navbar.js"></script>
+    <script type="module" src="./js/navbar.js"></script>
     <script type="module" src="./js/dashboard.js"></script>
 </body>
 </html>
