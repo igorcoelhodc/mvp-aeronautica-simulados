@@ -1,6 +1,22 @@
-// admin.js — Curadoria Administrativa (Categorias + CRUD de Questões Comentadas)
+// admin.js — Curadoria Administrativa (Categorias + CRUD de Questões Comentadas com Imagens)
 
-import { apiRequest, clearToken, getToken } from './api.js';
+import { apiRequest, apiUpload, clearToken, getToken } from './api.js';
+
+const IMAGE_FIELD_KEYS = [
+  'enunciado_imagem_url',
+  'alternativa_a_imagem_url',
+  'alternativa_b_imagem_url',
+  'alternativa_c_imagem_url',
+  'alternativa_d_imagem_url',
+  'comentario_imagem_url',
+];
+
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
+
+function isSafeUploadUrl(url) {
+  return typeof url === 'string' && url.startsWith('/uploads/');
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   const loadingEl = document.getElementById('admin-loading');
@@ -46,7 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const questoesCountBadge = document.getElementById('questoes-count-badge');
   const listaQuestoesEl = document.getElementById('lista-questoes');
 
-  let questoesCache = [];
+  const imageWidgets = new Map();
+  let activeUploadsCount = 0;
 
   function showFeedback(el, message, type = 'error') {
     if (!el) return;
@@ -80,8 +97,130 @@ document.addEventListener('DOMContentLoaded', () => {
   logoutBtn?.addEventListener('click', handleLogout);
   logoutBtnMobile?.addEventListener('click', handleLogout);
 
+  function setWidgetStatus(widget, message, isError = false) {
+    if (!widget?.statusEl) return;
+    widget.statusEl.textContent = message || '';
+    widget.statusEl.classList.toggle('text-red-600', isError);
+    widget.statusEl.classList.toggle('text-carbon/65', !isError);
+  }
+
+  function setImageFieldValue(fieldKey, url) {
+    const widget = imageWidgets.get(fieldKey);
+    if (!widget) return;
+
+    const validUrl = isSafeUploadUrl(url) ? url : '';
+    widget.urlInput.value = validUrl;
+
+    if (validUrl) {
+      widget.previewImg.src = validUrl;
+      widget.previewWrap.classList.remove('hidden');
+      widget.previewWrap.classList.add('inline-flex');
+      widget.btnLabel.textContent = 'Trocar imagem';
+    } else {
+      widget.previewImg.removeAttribute('src');
+      widget.previewWrap.classList.add('hidden');
+      widget.previewWrap.classList.remove('inline-flex');
+      widget.btnLabel.textContent = 'Anexar imagem';
+    }
+    setWidgetStatus(widget, '');
+  }
+
+  function getImageFieldValue(fieldKey) {
+    const widget = imageWidgets.get(fieldKey);
+    if (!widget) return null;
+    const val = widget.urlInput.value.trim();
+    return val ? val : null;
+  }
+
+  function resetAllImageFields() {
+    IMAGE_FIELD_KEYS.forEach((key) => {
+      const widget = imageWidgets.get(key);
+      if (widget?.fileInput) widget.fileInput.value = '';
+      setImageFieldValue(key, null);
+    });
+  }
+
+  function initImageWidgets() {
+    document.querySelectorAll('[data-image-field]').forEach((container) => {
+      const fieldKey = container.dataset.imageField;
+      const urlInput = container.querySelector('[data-image-url]');
+      const fileInput = container.querySelector('[data-image-file]');
+      const triggerBtn = container.querySelector('[data-image-trigger]');
+      const btnLabel = container.querySelector('[data-image-btn-label]');
+      const statusEl = container.querySelector('[data-image-status]');
+      const previewWrap = container.querySelector('[data-image-preview-wrap]');
+      const previewImg = container.querySelector('[data-image-preview]');
+      const removeBtn = container.querySelector('[data-image-remove]');
+
+      if (!fieldKey || !urlInput || !fileInput || !triggerBtn || !previewWrap || !previewImg) {
+        return;
+      }
+
+      const widget = {
+        fieldKey,
+        urlInput,
+        fileInput,
+        triggerBtn,
+        btnLabel,
+        statusEl,
+        previewWrap,
+        previewImg,
+        removeBtn,
+      };
+      imageWidgets.set(fieldKey, widget);
+
+      triggerBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      removeBtn?.addEventListener('click', () => {
+        fileInput.value = '';
+        setImageFieldValue(fieldKey, null);
+      });
+
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+
+        if (file.size > MAX_UPLOAD_BYTES) {
+          setWidgetStatus(widget, 'Arquivo maior que 5 MB.', true);
+          fileInput.value = '';
+          return;
+        }
+        if (file.type && !ALLOWED_IMAGE_TYPES.has(file.type)) {
+          setWidgetStatus(widget, 'Use apenas JPEG, PNG ou WebP.', true);
+          fileInput.value = '';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        activeUploadsCount += 1;
+        triggerBtn.disabled = true;
+        setWidgetStatus(widget, 'Enviando imagem...');
+
+        try {
+          const data = await apiUpload('/admin/uploads', formData);
+          if (!isSafeUploadUrl(data?.url)) {
+            throw new Error('URL de imagem retornada pelo servidor é inválida.');
+          }
+          setImageFieldValue(fieldKey, data.url);
+          setWidgetStatus(widget, 'Imagem anexada.');
+        } catch (err) {
+          setWidgetStatus(widget, err.message || 'Erro ao enviar imagem.', true);
+        } finally {
+          activeUploadsCount = Math.max(0, activeUploadsCount - 1);
+          triggerBtn.disabled = false;
+          fileInput.value = '';
+        }
+      });
+    });
+  }
+
   function resetQuestaoFormMode() {
     questaoForm?.reset();
+    resetAllImageFields();
     if (questaoIdInput) questaoIdInput.value = '';
     if (questaoFormTitle) questaoFormTitle.textContent = 'Cadastrar Questão Comentada';
     if (questaoSubmitLabel) questaoSubmitLabel.textContent = 'Salvar Questão';
@@ -102,6 +241,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (altDInput) altDInput.value = questao.alternativa_d;
     if (comentarioInput) comentarioInput.value = questao.comentario;
 
+    IMAGE_FIELD_KEYS.forEach((key) => {
+      setImageFieldValue(key, questao[key] || null);
+    });
+
     if (questaoFormTitle) questaoFormTitle.textContent = 'Editar Questão Comentada';
     if (questaoSubmitLabel) questaoSubmitLabel.textContent = 'Atualizar Questão';
     questaoEditBadge?.classList.remove('hidden');
@@ -121,6 +264,16 @@ document.addEventListener('DOMContentLoaded', () => {
     resetQuestaoFormMode();
     showFeedback(questaoFeedback, '');
   });
+
+  function createAdminThumb(url, altText, sizeClass = 'max-h-36') {
+    if (!isSafeUploadUrl(url)) return null;
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = altText;
+    img.loading = 'lazy';
+    img.className = `${sizeClass} w-auto max-w-full rounded-xl border border-gray-200/80 bg-white mt-2 object-contain`;
+    return img;
+  }
 
   function renderCategorias(categorias) {
     const selectedFormVal = categoriaIdSelect?.value || '';
@@ -184,8 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderQuestoes(questoes) {
-    questoesCache = questoes;
-
     if (questoesCountBadge) {
       questoesCountBadge.textContent = `${questoes.length} ${questoes.length === 1 ? 'questão' : 'questões'}`;
     }
@@ -244,13 +395,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
       badges.append(catBadge, statusBadge, gabBadge);
 
+      const hasImages = IMAGE_FIELD_KEYS.some((key) => isSafeUploadUrl(q[key]));
+      if (hasImages) {
+        const imgBadge = document.createElement('span');
+        imgBadge.className = 'px-2.5 py-1 rounded-full bg-secondary/15 text-primary text-xs font-semibold inline-flex items-center gap-1';
+        const imgIcon = document.createElement('i');
+        imgIcon.className = 'ph-fill ph-image';
+        imgBadge.append(imgIcon, document.createTextNode('Com imagem'));
+        badges.appendChild(imgBadge);
+      }
+
       const actions = document.createElement('div');
       actions.className = 'flex items-center gap-2';
 
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
       editBtn.className = 'px-3.5 py-1.5 rounded-xl bg-white border border-gray-200 text-xs font-poppins font-semibold text-carbon hover:border-primary hover:text-primary transition-colors flex items-center gap-1.5';
-      editBtn.innerHTML = '<i class="ph-bold ph-pencil-simple"></i> Editar';
+      const editIcon = document.createElement('i');
+      editIcon.className = 'ph-bold ph-pencil-simple';
+      editBtn.append(editIcon, document.createTextNode('Editar'));
       editBtn.addEventListener('click', () => enterEditMode(q));
       actions.appendChild(editBtn);
 
@@ -258,55 +421,73 @@ document.addEventListener('DOMContentLoaded', () => {
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
         delBtn.className = 'px-3.5 py-1.5 rounded-xl bg-white border border-red-200 text-xs font-poppins font-semibold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1.5';
-        delBtn.innerHTML = '<i class="ph-bold ph-eye-slash"></i> Desativar';
+        const delIcon = document.createElement('i');
+        delIcon.className = 'ph-bold ph-eye-slash';
+        delBtn.append(delIcon, document.createTextNode('Desativar'));
         delBtn.addEventListener('click', () => handleDesativarQuestao(q.id));
         actions.appendChild(delBtn);
       }
 
       header.append(badges, actions);
 
-      // Enunciado
-      const enunciadoEl = document.createElement('h3');
-      enunciadoEl.className = 'font-poppins font-semibold text-base text-carbon leading-relaxed mb-4';
-      enunciadoEl.textContent = q.enunciado;
+      // Enunciado + imagem opcional
+      const enunciadoWrap = document.createElement('div');
+      enunciadoWrap.className = 'mb-4';
 
-      // Alternativas
+      const enunciadoEl = document.createElement('h3');
+      enunciadoEl.className = 'font-poppins font-semibold text-base text-carbon leading-relaxed';
+      enunciadoEl.textContent = q.enunciado;
+      enunciadoWrap.appendChild(enunciadoEl);
+
+      const enunThumb = createAdminThumb(q.enunciado_imagem_url, 'Imagem do enunciado', 'max-h-40');
+      if (enunThumb) enunciadoWrap.appendChild(enunThumb);
+
+      // Alternativas + imagens opcionais
       const altsGrid = document.createElement('div');
       altsGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-4 text-sm';
 
       const alts = [
-        ['A', q.alternativa_a],
-        ['B', q.alternativa_b],
-        ['C', q.alternativa_c],
-        ['D', q.alternativa_d],
+        ['A', q.alternativa_a, q.alternativa_a_imagem_url],
+        ['B', q.alternativa_b, q.alternativa_b_imagem_url],
+        ['C', q.alternativa_c, q.alternativa_c_imagem_url],
+        ['D', q.alternativa_d, q.alternativa_d_imagem_url],
       ];
 
-      alts.forEach(([letra, texto]) => {
+      alts.forEach(([letra, texto, imgUrl]) => {
         const isCorrect = q.gabarito === letra;
         const altItem = document.createElement('div');
         altItem.className = isCorrect
           ? 'p-3 rounded-xl border border-primary/50 bg-primary/10 text-carbon font-medium'
           : 'p-3 rounded-xl border border-gray-200/80 bg-white text-carbon/85';
 
+        const textLine = document.createElement('div');
         const strong = document.createElement('strong');
         strong.className = isCorrect ? 'text-primary font-poppins mr-1.5' : 'text-carbon/70 font-poppins mr-1.5';
         strong.textContent = `${letra})`;
+        textLine.append(strong, document.createTextNode(texto));
+        altItem.appendChild(textLine);
 
-        altItem.append(strong, document.createTextNode(texto));
+        const altThumb = createAdminThumb(imgUrl, `Imagem da alternativa ${letra}`, 'max-h-24');
+        if (altThumb) altItem.appendChild(altThumb);
+
         altsGrid.appendChild(altItem);
       });
 
-      // Comentário
+      // Comentário + imagem opcional
       const comentarioBox = document.createElement('div');
       comentarioBox.className = 'p-3.5 rounded-xl glass-dark text-xs sm:text-sm text-carbon/85 leading-relaxed';
 
+      const comText = document.createElement('div');
       const comLabel = document.createElement('strong');
       comLabel.className = 'text-primary font-poppins mr-1.5';
       comLabel.textContent = 'Comentário:';
+      comText.append(comLabel, document.createTextNode(q.comentario));
+      comentarioBox.appendChild(comText);
 
-      comentarioBox.append(comLabel, document.createTextNode(q.comentario));
+      const comThumb = createAdminThumb(q.comentario_imagem_url, 'Imagem do comentário', 'max-h-36');
+      if (comThumb) comentarioBox.appendChild(comThumb);
 
-      card.append(header, enunciadoEl, altsGrid, comentarioBox);
+      card.append(header, enunciadoWrap, altsGrid, comentarioBox);
       listaQuestoesEl.appendChild(card);
     });
   }
@@ -377,16 +558,27 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     showFeedback(questaoFeedback, '');
 
+    if (activeUploadsCount > 0) {
+      showFeedback(questaoFeedback, 'Aguarde o término do envio das imagens antes de salvar.');
+      return;
+    }
+
     const editId = questaoIdInput?.value.trim() || '';
     const payload = {
       categoria_id: categoriaIdSelect?.value.trim() || '',
       gabarito: gabaritoSelect?.value.trim() || '',
       enunciado: enunciadoInput?.value.trim() || '',
+      enunciado_imagem_url: getImageFieldValue('enunciado_imagem_url'),
       alternativa_a: altAInput?.value.trim() || '',
+      alternativa_a_imagem_url: getImageFieldValue('alternativa_a_imagem_url'),
       alternativa_b: altBInput?.value.trim() || '',
+      alternativa_b_imagem_url: getImageFieldValue('alternativa_b_imagem_url'),
       alternativa_c: altCInput?.value.trim() || '',
+      alternativa_c_imagem_url: getImageFieldValue('alternativa_c_imagem_url'),
       alternativa_d: altDInput?.value.trim() || '',
+      alternativa_d_imagem_url: getImageFieldValue('alternativa_d_imagem_url'),
       comentario: comentarioInput?.value.trim() || '',
+      comentario_imagem_url: getImageFieldValue('comentario_imagem_url'),
     };
 
     if (!payload.categoria_id) {
@@ -455,6 +647,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (userNameEl) userNameEl.textContent = usuario.nome;
       userBadge?.classList.remove('hidden');
       userBadge?.classList.add('inline-flex');
+
+      initImageWidgets();
 
       loadingEl?.classList.add('hidden');
       contentEl?.classList.remove('hidden');

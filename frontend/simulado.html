@@ -113,7 +113,9 @@
                     </div>
                 </div>
 
-                <h1 id="questao-enunciado" class="font-poppins font-semibold text-lg sm:text-2xl text-carbon leading-relaxed mb-6"></h1>
+                <h1 id="questao-enunciado" class="font-poppins font-semibold text-lg sm:text-2xl text-carbon leading-relaxed mb-4"></h1>
+
+                <div id="questao-enunciado-imagem" class="hidden mb-6"></div>
 
                 <div id="alternativas-lista" class="space-y-3"></div>
 
@@ -187,6 +189,17 @@
         </section>
 
     </main>
+
+    <!-- Modal de Zoom (Lightbox) para Imagens de Cartas e Instrumentos -->
+    <div id="image-lightbox" role="dialog" aria-modal="true" aria-label="Visualização ampliada da imagem" class="hidden fixed inset-0 z-[100] bg-carbon/80 backdrop-blur-md items-center justify-center p-4 sm:p-8">
+        <div id="lightbox-dialog" class="relative max-w-5xl w-full max-h-[92vh] glass rounded-[2rem] p-4 sm:p-6 shadow-glass border border-white/50 flex flex-col items-center gap-3">
+            <button id="lightbox-close" type="button" aria-label="Fechar visualização ampliada" class="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-carbon text-white hover:bg-accent shadow-lg transition-colors flex items-center justify-center">
+                <i class="ph-bold ph-x text-lg"></i>
+            </button>
+            <img id="lightbox-img" alt="Imagem ampliada" class="max-h-[78vh] w-auto max-w-full object-contain rounded-xl bg-white">
+            <p id="lightbox-caption" class="text-xs sm:text-sm font-medium text-carbon/80 text-center"></p>
+        </div>
+    </div>
 
     <script type="module" src="./js/simulado.js"></script>
 </body>

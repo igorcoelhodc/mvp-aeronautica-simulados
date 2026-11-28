@@ -15,7 +15,9 @@ RUN go mod tidy && \
 FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates tzdata && \
-    adduser -D -H -u 10001 appuser
+    adduser -D -H -u 10001 appuser && \
+    mkdir -p /data/uploads && \
+    chown -R appuser:appuser /data/uploads
 
 WORKDIR /app
 COPY --from=builder /out/api /app/api

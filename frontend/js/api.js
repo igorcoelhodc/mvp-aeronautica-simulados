@@ -51,3 +51,26 @@ export async function apiRequest(endpoint, options = {}) {
 
   return data;
 }
+
+export async function apiUpload(endpoint, formData) {
+  const token = getToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearToken();
+    }
+    const message = data?.error || data?.message || 'Erro ao enviar arquivo para a API.';
+    throw new ApiError(message, response.status, data);
+  }
+
+  return data;
+}

@@ -1,6 +1,10 @@
-// simulado.js — Execução de Simulado com Cronômetro Regressivo (30 min) e Gabarito Comentado
+// simulado.js — Execução de Simulado com Cronômetro Regressivo (30 min), Imagens + Zoom Lightbox e Gabarito Comentado
 
 import { apiRequest, getToken } from './api.js';
+
+function isSafeUploadUrl(url) {
+  return typeof url === 'string' && url.startsWith('/uploads/');
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   const loadingEl = document.getElementById('simulado-loading');
@@ -19,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressBarEl = document.getElementById('progress-bar');
   const progressPercentEl = document.getElementById('progress-percent');
   const enunciadoEl = document.getElementById('questao-enunciado');
+  const enunciadoImagemEl = document.getElementById('questao-enunciado-imagem');
   const alternativasListaEl = document.getElementById('alternativas-lista');
   const btnAnterior = document.getElementById('btn-anterior');
   const btnProxima = document.getElementById('btn-proxima');
@@ -37,6 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultadoAcertosEl = document.getElementById('resultado-acertos');
   const gabaritoDetalhesEl = document.getElementById('gabarito-detalhes');
 
+  // Lightbox Modal
+  const lightboxEl = document.getElementById('image-lightbox');
+  const lightboxImg = document.getElementById('lightbox-img');
+  const lightboxCaption = document.getElementById('lightbox-caption');
+  const lightboxCloseBtn = document.getElementById('lightbox-close');
+
   let simuladoId = null;
   let simuladoAtual = null;
   let questoes = [];
@@ -45,6 +56,67 @@ document.addEventListener('DOMContentLoaded', () => {
   let remainingSeconds = 0;
   let timerInterval = null;
   let isFinalizing = false;
+
+  function openLightbox(url, caption) {
+    if (!isSafeUploadUrl(url) || !lightboxEl || !lightboxImg) return;
+    lightboxImg.src = url;
+    lightboxImg.alt = caption || 'Imagem ampliada da questão';
+    if (lightboxCaption) {
+      lightboxCaption.textContent = caption
+        ? `${caption} — Clique fora ou pressione Esc para fechar`
+        : 'Clique fora ou pressione Esc para fechar';
+    }
+    lightboxEl.classList.remove('hidden');
+    lightboxEl.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    if (!lightboxEl || !lightboxImg) return;
+    lightboxEl.classList.add('hidden');
+    lightboxEl.classList.remove('flex');
+    lightboxImg.removeAttribute('src');
+    document.body.style.overflow = '';
+  }
+
+  lightboxCloseBtn?.addEventListener('click', closeLightbox);
+  lightboxEl?.addEventListener('click', (event) => {
+    if (event.target === lightboxEl) {
+      closeLightbox();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && lightboxEl && !lightboxEl.classList.contains('hidden')) {
+      closeLightbox();
+    }
+  });
+
+  function createSafeZoomableImage(url, altText, maxHeightClass = 'max-h-72') {
+    if (!isSafeUploadUrl(url)) return null;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'relative inline-block max-w-full group mt-3';
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = altText;
+    img.loading = 'lazy';
+    img.className = `${maxHeightClass} w-auto max-w-full rounded-xl border border-white/70 bg-white/90 shadow-sm object-contain cursor-zoom-in transition-transform duration-200 group-hover:scale-[1.01]`;
+
+    const zoomBadge = document.createElement('span');
+    zoomBadge.className = 'pointer-events-none absolute bottom-2 right-2 px-2.5 py-1 rounded-full bg-carbon/75 text-white text-[11px] font-poppins font-medium inline-flex items-center gap-1 opacity-90 group-hover:opacity-100';
+    const zoomIcon = document.createElement('i');
+    zoomIcon.className = 'ph-bold ph-magnifying-glass-plus';
+    zoomBadge.append(zoomIcon, document.createTextNode('Ampliar'));
+
+    img.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openLightbox(url, altText);
+    });
+
+    wrapper.append(img, zoomBadge);
+    return wrapper;
+  }
 
   function storageKey() {
     return `aero_simulado_respostas_${simuladoId}`;
@@ -205,59 +277,96 @@ document.addEventListener('DOMContentLoaded', () => {
       enunciadoEl.textContent = `${currentIndex + 1}. ${q.enunciado}`;
     }
 
+    if (enunciadoImagemEl) {
+      enunciadoImagemEl.replaceChildren();
+      const imgNode = createSafeZoomableImage(
+        q.enunciado_imagem_url,
+        `Imagem da questão ${currentIndex + 1}`,
+        'max-h-80'
+      );
+      if (imgNode) {
+        enunciadoImagemEl.appendChild(imgNode);
+        enunciadoImagemEl.classList.remove('hidden');
+      } else {
+        enunciadoImagemEl.classList.add('hidden');
+      }
+    }
+
     if (alternativasListaEl) {
       alternativasListaEl.replaceChildren();
 
       const alts = [
-        ['A', q.alternativa_a],
-        ['B', q.alternativa_b],
-        ['C', q.alternativa_c],
-        ['D', q.alternativa_d],
+        ['A', q.alternativa_a, q.alternativa_a_imagem_url],
+        ['B', q.alternativa_b, q.alternativa_b_imagem_url],
+        ['C', q.alternativa_c, q.alternativa_c_imagem_url],
+        ['D', q.alternativa_d, q.alternativa_d_imagem_url],
       ];
       const selecionada = respostas[q.id] || null;
 
-      alts.forEach(([letra, texto]) => {
+      alts.forEach(([letra, texto, imgUrl]) => {
         const isSelected = selecionada === letra;
 
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = isSelected
-          ? 'w-full text-left p-4 rounded-xl border-2 border-primary bg-primary/10 cursor-pointer flex items-center gap-3 relative overflow-hidden shadow-sm transition-all'
-          : 'w-full text-left p-4 rounded-xl border-2 border-white/60 bg-white/70 cursor-pointer hover:border-primary transition-all flex items-center gap-3';
+        const optionCard = document.createElement('div');
+        optionCard.setAttribute('role', 'radio');
+        optionCard.setAttribute('aria-checked', String(isSelected));
+        optionCard.tabIndex = 0;
+        optionCard.className = isSelected
+          ? 'w-full text-left p-4 rounded-xl border-2 border-primary bg-primary/10 cursor-pointer flex items-start gap-3 relative overflow-hidden shadow-sm transition-all'
+          : 'w-full text-left p-4 rounded-xl border-2 border-white/60 bg-white/70 cursor-pointer hover:border-primary transition-all flex items-start gap-3';
 
         if (isSelected) {
           const rightBar = document.createElement('div');
           rightBar.className = 'absolute right-0 top-0 bottom-0 w-1 bg-primary';
-          btn.appendChild(rightBar);
+          optionCard.appendChild(rightBar);
 
           const checkIcon = document.createElement('i');
-          checkIcon.className = 'ph-fill ph-check-circle text-primary text-xl shrink-0';
-          btn.appendChild(checkIcon);
+          checkIcon.className = 'ph-fill ph-check-circle text-primary text-xl shrink-0 mt-0.5';
+          optionCard.appendChild(checkIcon);
         } else {
           const circle = document.createElement('div');
-          circle.className = 'w-5 h-5 rounded-full border-2 border-carbon/30 bg-white shrink-0';
-          btn.appendChild(circle);
+          circle.className = 'w-5 h-5 rounded-full border-2 border-carbon/30 bg-white shrink-0 mt-0.5';
+          optionCard.appendChild(circle);
         }
+
+        const contentWrap = document.createElement('div');
+        contentWrap.className = 'flex-1 min-w-0';
 
         const span = document.createElement('span');
         span.className = isSelected
-          ? 'text-sm sm:text-base font-medium text-primary'
-          : 'text-sm sm:text-base font-medium text-carbon';
+          ? 'text-sm sm:text-base font-medium text-primary block'
+          : 'text-sm sm:text-base font-medium text-carbon block';
 
         const letraEl = document.createElement('strong');
         letraEl.className = 'font-poppins mr-1.5';
         letraEl.textContent = `${letra})`;
 
         span.append(letraEl, document.createTextNode(texto));
-        btn.appendChild(span);
+        contentWrap.appendChild(span);
 
-        btn.addEventListener('click', () => {
+        const altImg = createSafeZoomableImage(
+          imgUrl,
+          `Imagem da alternativa ${letra} (Questão ${currentIndex + 1})`,
+          'max-h-44'
+        );
+        if (altImg) contentWrap.appendChild(altImg);
+
+        optionCard.appendChild(contentWrap);
+
+        const selectOption = () => {
           respostas[q.id] = letra;
           saveLocalRespostas();
           renderCurrentQuestion();
+        };
+
+        optionCard.addEventListener('click', selectOption);
+        optionCard.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            selectOption();
+          }
         });
 
-        alternativasListaEl.appendChild(btn);
+        alternativasListaEl.appendChild(optionCard);
       });
     }
 
@@ -351,51 +460,82 @@ document.addEventListener('DOMContentLoaded', () => {
       badges.append(statusPill, gabPill);
       top.append(numLabel, badges);
 
+      const enunWrap = document.createElement('div');
+      enunWrap.className = 'mb-4';
+
       const enun = document.createElement('h3');
-      enun.className = 'font-poppins font-semibold text-base text-carbon leading-relaxed mb-4';
+      enun.className = 'font-poppins font-semibold text-base text-carbon leading-relaxed';
       enun.textContent = item.enunciado;
+      enunWrap.appendChild(enun);
+
+      const enunImg = createSafeZoomableImage(
+        item.enunciado_imagem_url,
+        `Imagem da questão ${idx + 1}`,
+        'max-h-72'
+      );
+      if (enunImg) enunWrap.appendChild(enunImg);
 
       const altsWrap = document.createElement('div');
       altsWrap.className = 'grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-4 text-sm';
 
       const alts = [
-        ['A', item.alternativa_a],
-        ['B', item.alternativa_b],
-        ['C', item.alternativa_c],
-        ['D', item.alternativa_d],
+        ['A', item.alternativa_a, item.alternativa_a_imagem_url],
+        ['B', item.alternativa_b, item.alternativa_b_imagem_url],
+        ['C', item.alternativa_c, item.alternativa_c_imagem_url],
+        ['D', item.alternativa_d, item.alternativa_d_imagem_url],
       ];
 
-      alts.forEach(([letra, texto]) => {
+      alts.forEach(([letra, texto, imgUrl]) => {
         const isGabarito = item.gabarito === letra;
         const isMarcada = item.alternativa_marcada === letra;
 
         const row = document.createElement('div');
         if (isGabarito) {
-          row.className = 'p-3 rounded-xl border-2 border-emerald-400 bg-emerald-50 text-emerald-900 font-medium flex items-start gap-2';
+          row.className = 'p-3 rounded-xl border-2 border-emerald-400 bg-emerald-50 text-emerald-900 font-medium';
         } else if (isMarcada && !isGabarito) {
-          row.className = 'p-3 rounded-xl border-2 border-red-300 bg-red-50 text-red-900 font-medium flex items-start gap-2';
+          row.className = 'p-3 rounded-xl border-2 border-red-300 bg-red-50 text-red-900 font-medium';
         } else {
-          row.className = 'p-3 rounded-xl border border-gray-200 bg-white text-carbon/80 flex items-start gap-2';
+          row.className = 'p-3 rounded-xl border border-gray-200 bg-white text-carbon/80';
         }
+
+        const textLine = document.createElement('div');
+        textLine.className = 'flex items-start gap-2';
 
         const strong = document.createElement('strong');
         strong.className = 'font-poppins shrink-0';
         strong.textContent = `${letra})`;
 
-        row.append(strong, document.createTextNode(texto));
+        textLine.append(strong, document.createTextNode(texto));
+        row.appendChild(textLine);
+
+        const altImg = createSafeZoomableImage(
+          imgUrl,
+          `Imagem da alternativa ${letra} (Questão ${idx + 1})`,
+          'max-h-40'
+        );
+        if (altImg) row.appendChild(altImg);
+
         altsWrap.appendChild(row);
       });
 
       const comentarioBox = document.createElement('div');
       comentarioBox.className = 'p-4 rounded-xl glass-dark text-xs sm:text-sm text-carbon/90 leading-relaxed';
 
+      const comText = document.createElement('div');
       const comTitle = document.createElement('strong');
       comTitle.className = 'text-primary font-poppins mr-1.5';
       comTitle.textContent = 'Comentário Técnico:';
+      comText.append(comTitle, document.createTextNode(item.comentario));
+      comentarioBox.appendChild(comText);
 
-      comentarioBox.append(comTitle, document.createTextNode(item.comentario));
+      const comImg = createSafeZoomableImage(
+        item.comentario_imagem_url,
+        `Imagem do comentário técnico (Questão ${idx + 1})`,
+        'max-h-72'
+      );
+      if (comImg) comentarioBox.appendChild(comImg);
 
-      card.append(top, enun, altsWrap, comentarioBox);
+      card.append(top, enunWrap, altsWrap, comentarioBox);
       gabaritoDetalhesEl.appendChild(card);
     });
   }
@@ -501,7 +641,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Mescla respostas salvas no servidor (se houver) com rascunho local da aba
       respostas = loadLocalRespostas();
       questoes.forEach((q) => {
         if (q.alternativa_marcada && !respostas[q.id]) {

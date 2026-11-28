@@ -1,0 +1,19 @@
+# Variáveis de ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs e arquivos temporários
+*.log
+tmp/
+
+# Binários e artefatos de build (Go)
+backend/bin/
+*.exe
+*.out

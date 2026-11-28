@@ -1,15 +1,19 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: aeronautica_postgres
+    container_name: aeronautica_postgres_prod
     restart: unless-stopped
-    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+      - ./database/migrations/003_questoes_imagens.sql:/docker-entrypoint-initdb.d/003_questoes_imagens.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
       timeout: 5s
       retries: 5
 
@@ -17,28 +21,33 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: aeronautica_backend
+    container_name: aeronautica_backend_prod
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
     environment:
-      POSTGRES_HOST: postgres
+      UPLOADS_DIR: /data/uploads
+    volumes:
+      - uploads_data:/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
+    expose:
+      - "8080"
 
   caddy:
     image: caddy:2-alpine
-    container_name: aeronautica_caddy
+    container_name: aeronautica_caddy_prod
     restart: unless-stopped
     environment:
       DOMAIN: ${DOMAIN}
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"
     volumes:
       - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
-      - ./frontend:/srv:ro
+      - ./frontend:/srv/frontend:ro
+      - uploads_data:/srv/uploads:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -46,5 +55,6 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
   caddy_data:
   caddy_config:

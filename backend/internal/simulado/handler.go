@@ -57,29 +57,41 @@ type SimuladoSummary struct {
 	Status                string     `json:"status"`
 }
 
-// QuestaoExecucao representa uma questão durante o simulado EM_ANDAMENTO (sem gabarito nem comentário).
+// QuestaoExecucao representa uma questão durante o simulado EM_ANDAMENTO
+// (regra anti-cola: nunca expõe gabarito, comentario ou comentario_imagem_url).
 type QuestaoExecucao struct {
-	ID                 string  `json:"id"`
-	Enunciado          string  `json:"enunciado"`
-	AlternativaA       string  `json:"alternativa_a"`
-	AlternativaB       string  `json:"alternativa_b"`
-	AlternativaC       string  `json:"alternativa_c"`
-	AlternativaD       string  `json:"alternativa_d"`
-	AlternativaMarcada *string `json:"alternativa_marcada"`
+	ID                    string  `json:"id"`
+	Enunciado             string  `json:"enunciado"`
+	EnunciadoImagemURL    *string `json:"enunciado_imagem_url"`
+	AlternativaA          string  `json:"alternativa_a"`
+	AlternativaAImagemURL *string `json:"alternativa_a_imagem_url"`
+	AlternativaB          string  `json:"alternativa_b"`
+	AlternativaBImagemURL *string `json:"alternativa_b_imagem_url"`
+	AlternativaC          string  `json:"alternativa_c"`
+	AlternativaCImagemURL *string `json:"alternativa_c_imagem_url"`
+	AlternativaD          string  `json:"alternativa_d"`
+	AlternativaDImagemURL *string `json:"alternativa_d_imagem_url"`
+	AlternativaMarcada    *string `json:"alternativa_marcada"`
 }
 
-// QuestaoRevisao representa uma questão após FINALIZADO (inclui gabarito oficial e comentário).
+// QuestaoRevisao representa uma questão após FINALIZADO (inclui gabarito oficial, comentário e imagem do comentário).
 type QuestaoRevisao struct {
-	ID                 string  `json:"id"`
-	Enunciado          string  `json:"enunciado"`
-	AlternativaA       string  `json:"alternativa_a"`
-	AlternativaB       string  `json:"alternativa_b"`
-	AlternativaC       string  `json:"alternativa_c"`
-	AlternativaD       string  `json:"alternativa_d"`
-	AlternativaMarcada *string `json:"alternativa_marcada"`
-	Gabarito           string  `json:"gabarito"`
-	Correta            bool    `json:"correta"`
-	Comentario         string  `json:"comentario"`
+	ID                    string  `json:"id"`
+	Enunciado             string  `json:"enunciado"`
+	EnunciadoImagemURL    *string `json:"enunciado_imagem_url"`
+	AlternativaA          string  `json:"alternativa_a"`
+	AlternativaAImagemURL *string `json:"alternativa_a_imagem_url"`
+	AlternativaB          string  `json:"alternativa_b"`
+	AlternativaBImagemURL *string `json:"alternativa_b_imagem_url"`
+	AlternativaC          string  `json:"alternativa_c"`
+	AlternativaCImagemURL *string `json:"alternativa_c_imagem_url"`
+	AlternativaD          string  `json:"alternativa_d"`
+	AlternativaDImagemURL *string `json:"alternativa_d_imagem_url"`
+	AlternativaMarcada    *string `json:"alternativa_marcada"`
+	Gabarito              string  `json:"gabarito"`
+	Correta               bool    `json:"correta"`
+	Comentario            string  `json:"comentario"`
+	ComentarioImagemURL   *string `json:"comentario_imagem_url"`
 }
 
 type ResumoGeral struct {
@@ -90,12 +102,12 @@ type ResumoGeral struct {
 }
 
 type ResumoCategoria struct {
-	CategoriaID      string  `json:"categoria_id"`
-	Licenca          string  `json:"licenca"`
-	Materia          string  `json:"materia"`
-	TotalSimulados   int     `json:"total_simulados"`
-	Aprovacoes       int     `json:"aprovacoes"`
-	MediaPercentual  float64 `json:"media_percentual"`
+	CategoriaID     string  `json:"categoria_id"`
+	Licenca         string  `json:"licenca"`
+	Materia         string  `json:"materia"`
+	TotalSimulados  int     `json:"total_simulados"`
+	Aprovacoes      int     `json:"aprovacoes"`
+	MediaPercentual float64 `json:"media_percentual"`
 }
 
 // Create inicia um novo simulado sorteando até 20 questões ativas aleatórias sem repetição.
@@ -148,7 +160,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := tx.Query(
 		ctx,
-		`SELECT id::text, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d
+		`SELECT id::text, enunciado, enunciado_imagem_url,
+		        alternativa_a, alternativa_a_imagem_url,
+		        alternativa_b, alternativa_b_imagem_url,
+		        alternativa_c, alternativa_c_imagem_url,
+		        alternativa_d, alternativa_d_imagem_url
 		 FROM questoes
 		 WHERE categoria_id = $1::uuid AND ativa = $2
 		 ORDER BY RANDOM()
@@ -168,10 +184,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&q.ID,
 			&q.Enunciado,
+			&q.EnunciadoImagemURL,
 			&q.AlternativaA,
+			&q.AlternativaAImagemURL,
 			&q.AlternativaB,
+			&q.AlternativaBImagemURL,
 			&q.AlternativaC,
+			&q.AlternativaCImagemURL,
 			&q.AlternativaD,
+			&q.AlternativaDImagemURL,
 		); err != nil {
 			rows.Close()
 			writeJSONError(w, http.StatusInternalServerError, "Erro ao ler questões sorteadas.")
@@ -323,22 +344,31 @@ func (h *Handler) Finalize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type respostaItem struct {
-		RespostaID   string
-		QuestaoID    string
-		Enunciado    string
-		AlternativaA string
-		AlternativaB string
-		AlternativaC string
-		AlternativaD string
-		Gabarito     string
-		Comentario   string
+		RespostaID            string
+		QuestaoID             string
+		Enunciado             string
+		EnunciadoImagemURL    *string
+		AlternativaA          string
+		AlternativaAImagemURL *string
+		AlternativaB          string
+		AlternativaBImagemURL *string
+		AlternativaC          string
+		AlternativaCImagemURL *string
+		AlternativaD          string
+		AlternativaDImagemURL *string
+		Gabarito              string
+		Comentario            string
+		ComentarioImagemURL   *string
 	}
 
 	rows, err := tx.Query(
 		ctx,
-		`SELECT sr.id::text, q.id::text, q.enunciado,
-		        q.alternativa_a, q.alternativa_b, q.alternativa_c, q.alternativa_d,
-		        TRIM(q.gabarito), q.comentario
+		`SELECT sr.id::text, q.id::text, q.enunciado, q.enunciado_imagem_url,
+		        q.alternativa_a, q.alternativa_a_imagem_url,
+		        q.alternativa_b, q.alternativa_b_imagem_url,
+		        q.alternativa_c, q.alternativa_c_imagem_url,
+		        q.alternativa_d, q.alternativa_d_imagem_url,
+		        TRIM(q.gabarito), q.comentario, q.comentario_imagem_url
 		 FROM simulado_respostas sr
 		 JOIN questoes q ON q.id = sr.questao_id
 		 WHERE sr.simulado_id = $1::uuid
@@ -357,12 +387,18 @@ func (h *Handler) Finalize(w http.ResponseWriter, r *http.Request) {
 			&it.RespostaID,
 			&it.QuestaoID,
 			&it.Enunciado,
+			&it.EnunciadoImagemURL,
 			&it.AlternativaA,
+			&it.AlternativaAImagemURL,
 			&it.AlternativaB,
+			&it.AlternativaBImagemURL,
 			&it.AlternativaC,
+			&it.AlternativaCImagemURL,
 			&it.AlternativaD,
+			&it.AlternativaDImagemURL,
 			&it.Gabarito,
 			&it.Comentario,
+			&it.ComentarioImagemURL,
 		); err != nil {
 			rows.Close()
 			writeJSONError(w, http.StatusInternalServerError, "Erro ao ler questões do simulado.")
@@ -401,16 +437,22 @@ func (h *Handler) Finalize(w http.ResponseWriter, r *http.Request) {
 		}
 
 		revisao = append(revisao, QuestaoRevisao{
-			ID:                 it.QuestaoID,
-			Enunciado:          it.Enunciado,
-			AlternativaA:       it.AlternativaA,
-			AlternativaB:       it.AlternativaB,
-			AlternativaC:       it.AlternativaC,
-			AlternativaD:       it.AlternativaD,
-			AlternativaMarcada: marcada,
-			Gabarito:           it.Gabarito,
-			Correta:            correta,
-			Comentario:         it.Comentario,
+			ID:                    it.QuestaoID,
+			Enunciado:             it.Enunciado,
+			EnunciadoImagemURL:    it.EnunciadoImagemURL,
+			AlternativaA:          it.AlternativaA,
+			AlternativaAImagemURL: it.AlternativaAImagemURL,
+			AlternativaB:          it.AlternativaB,
+			AlternativaBImagemURL: it.AlternativaBImagemURL,
+			AlternativaC:          it.AlternativaC,
+			AlternativaCImagemURL: it.AlternativaCImagemURL,
+			AlternativaD:          it.AlternativaD,
+			AlternativaDImagemURL: it.AlternativaDImagemURL,
+			AlternativaMarcada:    marcada,
+			Gabarito:              it.Gabarito,
+			Correta:               correta,
+			Comentario:            it.Comentario,
+			ComentarioImagemURL:   it.ComentarioImagemURL,
 		})
 	}
 
@@ -586,7 +628,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetByID retorna detalhes do simulado (sem gabarito se EM_ANDAMENTO; com gabarito comentado se FINALIZADO).
+// GetByID retorna detalhes do simulado (sem gabarito/comentário se EM_ANDAMENTO; com gabarito comentado se FINALIZADO).
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	claims, ok := auth.ClaimsFromContext(r.Context())
 	if !ok {
@@ -646,8 +688,11 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	if sim.Status == "EM_ANDAMENTO" {
 		rows, err := h.pool.Query(
 			ctx,
-			`SELECT q.id::text, q.enunciado,
-			        q.alternativa_a, q.alternativa_b, q.alternativa_c, q.alternativa_d,
+			`SELECT q.id::text, q.enunciado, q.enunciado_imagem_url,
+			        q.alternativa_a, q.alternativa_a_imagem_url,
+			        q.alternativa_b, q.alternativa_b_imagem_url,
+			        q.alternativa_c, q.alternativa_c_imagem_url,
+			        q.alternativa_d, q.alternativa_d_imagem_url,
 			        TRIM(sr.alternativa_marcada)
 			 FROM simulado_respostas sr
 			 JOIN questoes q ON q.id = sr.questao_id
@@ -667,10 +712,15 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 			if err := rows.Scan(
 				&q.ID,
 				&q.Enunciado,
+				&q.EnunciadoImagemURL,
 				&q.AlternativaA,
+				&q.AlternativaAImagemURL,
 				&q.AlternativaB,
+				&q.AlternativaBImagemURL,
 				&q.AlternativaC,
+				&q.AlternativaCImagemURL,
 				&q.AlternativaD,
+				&q.AlternativaDImagemURL,
 				&q.AlternativaMarcada,
 			); err != nil {
 				writeJSONError(w, http.StatusInternalServerError, "Erro ao ler questões do simulado.")
@@ -702,12 +752,16 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Status FINALIZADO: retorna gabarito comentado completo
+	// Status FINALIZADO: retorna gabarito comentado completo (incluindo comentario_imagem_url)
 	rows, err := h.pool.Query(
 		ctx,
-		`SELECT q.id::text, q.enunciado,
-		        q.alternativa_a, q.alternativa_b, q.alternativa_c, q.alternativa_d,
-		        TRIM(sr.alternativa_marcada), TRIM(q.gabarito), COALESCE(sr.correta, FALSE), q.comentario
+		`SELECT q.id::text, q.enunciado, q.enunciado_imagem_url,
+		        q.alternativa_a, q.alternativa_a_imagem_url,
+		        q.alternativa_b, q.alternativa_b_imagem_url,
+		        q.alternativa_c, q.alternativa_c_imagem_url,
+		        q.alternativa_d, q.alternativa_d_imagem_url,
+		        TRIM(sr.alternativa_marcada), TRIM(q.gabarito), COALESCE(sr.correta, FALSE),
+		        q.comentario, q.comentario_imagem_url
 		 FROM simulado_respostas sr
 		 JOIN questoes q ON q.id = sr.questao_id
 		 WHERE sr.simulado_id = $1::uuid
@@ -726,14 +780,20 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&q.ID,
 			&q.Enunciado,
+			&q.EnunciadoImagemURL,
 			&q.AlternativaA,
+			&q.AlternativaAImagemURL,
 			&q.AlternativaB,
+			&q.AlternativaBImagemURL,
 			&q.AlternativaC,
+			&q.AlternativaCImagemURL,
 			&q.AlternativaD,
+			&q.AlternativaDImagemURL,
 			&q.AlternativaMarcada,
 			&q.Gabarito,
 			&q.Correta,
 			&q.Comentario,
+			&q.ComentarioImagemURL,
 		); err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "Erro ao ler revisão do simulado.")
 			return

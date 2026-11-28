@@ -17,14 +17,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var uuidRegex = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+var (
+	uuidRegex           = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	uploadImageURLRegex = regexp.MustCompile(`^/uploads/[0-9a-fA-F-]+\.(jpg|jpeg|png|webp)$`)
+)
 
 type Handler struct {
-	pool *pgxpool.Pool
+	pool       *pgxpool.Pool
+	uploadsDir string
 }
 
-func NewHandler(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+func NewHandler(pool *pgxpool.Pool, uploadsDir string) *Handler {
+	return &Handler{
+		pool:       pool,
+		uploadsDir: uploadsDir,
+	}
 }
 
 type CategoriaResponse struct {
@@ -42,32 +49,44 @@ type createCategoriaRequest struct {
 }
 
 type QuestaoResponse struct {
-	ID               string    `json:"id"`
-	CategoriaID      string    `json:"categoria_id"`
-	CategoriaLicenca string    `json:"categoria_licenca"`
-	CategoriaMateria string    `json:"categoria_materia"`
-	Enunciado        string    `json:"enunciado"`
-	AlternativaA     string    `json:"alternativa_a"`
-	AlternativaB     string    `json:"alternativa_b"`
-	AlternativaC     string    `json:"alternativa_c"`
-	AlternativaD     string    `json:"alternativa_d"`
-	Gabarito         string    `json:"gabarito"`
-	Comentario       string    `json:"comentario"`
-	Ativa            bool      `json:"ativa"`
-	CriadoEm         time.Time `json:"criado_em"`
-	AtualizadoEm     time.Time `json:"atualizado_em"`
+	ID                    string    `json:"id"`
+	CategoriaID           string    `json:"categoria_id"`
+	CategoriaLicenca      string    `json:"categoria_licenca"`
+	CategoriaMateria      string    `json:"categoria_materia"`
+	Enunciado             string    `json:"enunciado"`
+	EnunciadoImagemURL    *string   `json:"enunciado_imagem_url"`
+	AlternativaA          string    `json:"alternativa_a"`
+	AlternativaAImagemURL *string   `json:"alternativa_a_imagem_url"`
+	AlternativaB          string    `json:"alternativa_b"`
+	AlternativaBImagemURL *string   `json:"alternativa_b_imagem_url"`
+	AlternativaC          string    `json:"alternativa_c"`
+	AlternativaCImagemURL *string   `json:"alternativa_c_imagem_url"`
+	AlternativaD          string    `json:"alternativa_d"`
+	AlternativaDImagemURL *string   `json:"alternativa_d_imagem_url"`
+	Gabarito              string    `json:"gabarito"`
+	Comentario            string    `json:"comentario"`
+	ComentarioImagemURL   *string   `json:"comentario_imagem_url"`
+	Ativa                 bool      `json:"ativa"`
+	CriadoEm              time.Time `json:"criado_em"`
+	AtualizadoEm          time.Time `json:"atualizado_em"`
 }
 
 type questaoRequest struct {
-	CategoriaID  string `json:"categoria_id"`
-	Enunciado    string `json:"enunciado"`
-	AlternativaA string `json:"alternativa_a"`
-	AlternativaB string `json:"alternativa_b"`
-	AlternativaC string `json:"alternativa_c"`
-	AlternativaD string `json:"alternativa_d"`
-	Gabarito     string `json:"gabarito"`
-	Comentario   string `json:"comentario"`
-	Ativa        *bool  `json:"ativa,omitempty"`
+	CategoriaID           string  `json:"categoria_id"`
+	Enunciado             string  `json:"enunciado"`
+	EnunciadoImagemURL    *string `json:"enunciado_imagem_url"`
+	AlternativaA          string  `json:"alternativa_a"`
+	AlternativaAImagemURL *string `json:"alternativa_a_imagem_url"`
+	AlternativaB          string  `json:"alternativa_b"`
+	AlternativaBImagemURL *string `json:"alternativa_b_imagem_url"`
+	AlternativaC          string  `json:"alternativa_c"`
+	AlternativaCImagemURL *string `json:"alternativa_c_imagem_url"`
+	AlternativaD          string  `json:"alternativa_d"`
+	AlternativaDImagemURL *string `json:"alternativa_d_imagem_url"`
+	Gabarito              string  `json:"gabarito"`
+	Comentario            string  `json:"comentario"`
+	ComentarioImagemURL   *string `json:"comentario_imagem_url"`
+	Ativa                 *bool   `json:"ativa,omitempty"`
 }
 
 // ListCategorias lista todas as categorias ativas com a contagem de questões ativas (rota autenticada para qualquer perfil).
@@ -194,8 +213,13 @@ func (h *Handler) ListQuestoes(w http.ResponseWriter, r *http.Request) {
 
 	sqlQuery := `
 		SELECT q.id::text, q.categoria_id::text, c.licenca, c.materia,
-		       q.enunciado, q.alternativa_a, q.alternativa_b, q.alternativa_c, q.alternativa_d,
-		       q.gabarito, q.comentario, q.ativa, q.criado_em, q.atualizado_em
+		       q.enunciado, q.enunciado_imagem_url,
+		       q.alternativa_a, q.alternativa_a_imagem_url,
+		       q.alternativa_b, q.alternativa_b_imagem_url,
+		       q.alternativa_c, q.alternativa_c_imagem_url,
+		       q.alternativa_d, q.alternativa_d_imagem_url,
+		       q.gabarito, q.comentario, q.comentario_imagem_url,
+		       q.ativa, q.criado_em, q.atualizado_em
 		FROM questoes q
 		JOIN categorias c ON c.id = q.categoria_id`
 
@@ -220,12 +244,18 @@ func (h *Handler) ListQuestoes(w http.ResponseWriter, r *http.Request) {
 			&q.CategoriaLicenca,
 			&q.CategoriaMateria,
 			&q.Enunciado,
+			&q.EnunciadoImagemURL,
 			&q.AlternativaA,
+			&q.AlternativaAImagemURL,
 			&q.AlternativaB,
+			&q.AlternativaBImagemURL,
 			&q.AlternativaC,
+			&q.AlternativaCImagemURL,
 			&q.AlternativaD,
+			&q.AlternativaDImagemURL,
 			&q.Gabarito,
 			&q.Comentario,
+			&q.ComentarioImagemURL,
 			&q.Ativa,
 			&q.CriadoEm,
 			&q.AtualizadoEm,
@@ -266,26 +296,45 @@ func (h *Handler) CreateQuestao(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		`WITH inserted AS (
 			INSERT INTO questoes (
-				categoria_id, enunciado, alternativa_a, alternativa_b,
-				alternativa_c, alternativa_d, gabarito, comentario, ativa
+				categoria_id, enunciado, enunciado_imagem_url,
+				alternativa_a, alternativa_a_imagem_url,
+				alternativa_b, alternativa_b_imagem_url,
+				alternativa_c, alternativa_c_imagem_url,
+				alternativa_d, alternativa_d_imagem_url,
+				gabarito, comentario, comentario_imagem_url, ativa
 			)
-			VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9)
-			RETURNING id, categoria_id, enunciado, alternativa_a, alternativa_b,
-			          alternativa_c, alternativa_d, gabarito, comentario, ativa, criado_em, atualizado_em
+			VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			RETURNING id, categoria_id, enunciado, enunciado_imagem_url,
+			          alternativa_a, alternativa_a_imagem_url,
+			          alternativa_b, alternativa_b_imagem_url,
+			          alternativa_c, alternativa_c_imagem_url,
+			          alternativa_d, alternativa_d_imagem_url,
+			          gabarito, comentario, comentario_imagem_url, ativa, criado_em, atualizado_em
 		)
 		SELECT i.id::text, i.categoria_id::text, c.licenca, c.materia,
-		       i.enunciado, i.alternativa_a, i.alternativa_b, i.alternativa_c, i.alternativa_d,
-		       i.gabarito, i.comentario, i.ativa, i.criado_em, i.atualizado_em
+		       i.enunciado, i.enunciado_imagem_url,
+		       i.alternativa_a, i.alternativa_a_imagem_url,
+		       i.alternativa_b, i.alternativa_b_imagem_url,
+		       i.alternativa_c, i.alternativa_c_imagem_url,
+		       i.alternativa_d, i.alternativa_d_imagem_url,
+		       i.gabarito, i.comentario, i.comentario_imagem_url,
+		       i.ativa, i.criado_em, i.atualizado_em
 		FROM inserted i
 		JOIN categorias c ON c.id = i.categoria_id`,
 		sanitized.CategoriaID,
 		sanitized.Enunciado,
+		sanitized.EnunciadoImagemURL,
 		sanitized.AlternativaA,
+		sanitized.AlternativaAImagemURL,
 		sanitized.AlternativaB,
+		sanitized.AlternativaBImagemURL,
 		sanitized.AlternativaC,
+		sanitized.AlternativaCImagemURL,
 		sanitized.AlternativaD,
+		sanitized.AlternativaDImagemURL,
 		sanitized.Gabarito,
 		sanitized.Comentario,
+		sanitized.ComentarioImagemURL,
 		true,
 	).Scan(
 		&q.ID,
@@ -293,12 +342,18 @@ func (h *Handler) CreateQuestao(w http.ResponseWriter, r *http.Request) {
 		&q.CategoriaLicenca,
 		&q.CategoriaMateria,
 		&q.Enunciado,
+		&q.EnunciadoImagemURL,
 		&q.AlternativaA,
+		&q.AlternativaAImagemURL,
 		&q.AlternativaB,
+		&q.AlternativaBImagemURL,
 		&q.AlternativaC,
+		&q.AlternativaCImagemURL,
 		&q.AlternativaD,
+		&q.AlternativaDImagemURL,
 		&q.Gabarito,
 		&q.Comentario,
+		&q.ComentarioImagemURL,
 		&q.Ativa,
 		&q.CriadoEm,
 		&q.AtualizadoEm,
@@ -347,31 +402,52 @@ func (h *Handler) UpdateQuestao(w http.ResponseWriter, r *http.Request) {
 			UPDATE questoes
 			SET categoria_id = $1::uuid,
 			    enunciado = $2,
-			    alternativa_a = $3,
-			    alternativa_b = $4,
-			    alternativa_c = $5,
-			    alternativa_d = $6,
-			    gabarito = $7,
-			    comentario = $8,
-			    ativa = COALESCE($9::boolean, ativa),
+			    enunciado_imagem_url = $3,
+			    alternativa_a = $4,
+			    alternativa_a_imagem_url = $5,
+			    alternativa_b = $6,
+			    alternativa_b_imagem_url = $7,
+			    alternativa_c = $8,
+			    alternativa_c_imagem_url = $9,
+			    alternativa_d = $10,
+			    alternativa_d_imagem_url = $11,
+			    gabarito = $12,
+			    comentario = $13,
+			    comentario_imagem_url = $14,
+			    ativa = COALESCE($15::boolean, ativa),
 			    atualizado_em = NOW()
-			WHERE id = $10::uuid
-			RETURNING id, categoria_id, enunciado, alternativa_a, alternativa_b,
-			          alternativa_c, alternativa_d, gabarito, comentario, ativa, criado_em, atualizado_em
+			WHERE id = $16::uuid
+			RETURNING id, categoria_id, enunciado, enunciado_imagem_url,
+			          alternativa_a, alternativa_a_imagem_url,
+			          alternativa_b, alternativa_b_imagem_url,
+			          alternativa_c, alternativa_c_imagem_url,
+			          alternativa_d, alternativa_d_imagem_url,
+			          gabarito, comentario, comentario_imagem_url, ativa, criado_em, atualizado_em
 		)
 		SELECT u.id::text, u.categoria_id::text, c.licenca, c.materia,
-		       u.enunciado, u.alternativa_a, u.alternativa_b, u.alternativa_c, u.alternativa_d,
-		       u.gabarito, u.comentario, u.ativa, u.criado_em, u.atualizado_em
+		       u.enunciado, u.enunciado_imagem_url,
+		       u.alternativa_a, u.alternativa_a_imagem_url,
+		       u.alternativa_b, u.alternativa_b_imagem_url,
+		       u.alternativa_c, u.alternativa_c_imagem_url,
+		       u.alternativa_d, u.alternativa_d_imagem_url,
+		       u.gabarito, u.comentario, u.comentario_imagem_url,
+		       u.ativa, u.criado_em, u.atualizado_em
 		FROM updated u
 		JOIN categorias c ON c.id = u.categoria_id`,
 		sanitized.CategoriaID,
 		sanitized.Enunciado,
+		sanitized.EnunciadoImagemURL,
 		sanitized.AlternativaA,
+		sanitized.AlternativaAImagemURL,
 		sanitized.AlternativaB,
+		sanitized.AlternativaBImagemURL,
 		sanitized.AlternativaC,
+		sanitized.AlternativaCImagemURL,
 		sanitized.AlternativaD,
+		sanitized.AlternativaDImagemURL,
 		sanitized.Gabarito,
 		sanitized.Comentario,
+		sanitized.ComentarioImagemURL,
 		sanitized.Ativa,
 		id,
 	).Scan(
@@ -380,12 +456,18 @@ func (h *Handler) UpdateQuestao(w http.ResponseWriter, r *http.Request) {
 		&q.CategoriaLicenca,
 		&q.CategoriaMateria,
 		&q.Enunciado,
+		&q.EnunciadoImagemURL,
 		&q.AlternativaA,
+		&q.AlternativaAImagemURL,
 		&q.AlternativaB,
+		&q.AlternativaBImagemURL,
 		&q.AlternativaC,
+		&q.AlternativaCImagemURL,
 		&q.AlternativaD,
+		&q.AlternativaDImagemURL,
 		&q.Gabarito,
 		&q.Comentario,
+		&q.ComentarioImagemURL,
 		&q.Ativa,
 		&q.CriadoEm,
 		&q.AtualizadoEm,
@@ -477,7 +559,41 @@ func validateQuestaoRequest(req questaoRequest) (questaoRequest, string) {
 		return out, "O comentário explicativo do gabarito é obrigatório."
 	}
 
+	var errMsg string
+	if out.EnunciadoImagemURL, errMsg = normalizeOptionalImageURL(req.EnunciadoImagemURL, "enunciado"); errMsg != "" {
+		return out, errMsg
+	}
+	if out.AlternativaAImagemURL, errMsg = normalizeOptionalImageURL(req.AlternativaAImagemURL, "alternativa A"); errMsg != "" {
+		return out, errMsg
+	}
+	if out.AlternativaBImagemURL, errMsg = normalizeOptionalImageURL(req.AlternativaBImagemURL, "alternativa B"); errMsg != "" {
+		return out, errMsg
+	}
+	if out.AlternativaCImagemURL, errMsg = normalizeOptionalImageURL(req.AlternativaCImagemURL, "alternativa C"); errMsg != "" {
+		return out, errMsg
+	}
+	if out.AlternativaDImagemURL, errMsg = normalizeOptionalImageURL(req.AlternativaDImagemURL, "alternativa D"); errMsg != "" {
+		return out, errMsg
+	}
+	if out.ComentarioImagemURL, errMsg = normalizeOptionalImageURL(req.ComentarioImagemURL, "comentário"); errMsg != "" {
+		return out, errMsg
+	}
+
 	return out, ""
+}
+
+func normalizeOptionalImageURL(raw *string, fieldLabel string) (*string, string) {
+	if raw == nil {
+		return nil, ""
+	}
+	val := strings.TrimSpace(*raw)
+	if val == "" {
+		return nil, ""
+	}
+	if !strings.HasPrefix(val, "/uploads/") || !uploadImageURLRegex.MatchString(val) {
+		return nil, fmt.Sprintf("URL de imagem inválida para %s. Utilize apenas imagens enviadas pelo upload (/uploads/...).", fieldLabel)
+	}
+	return &val, ""
 }
 
 func isValidUUID(value string) bool {

@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager) http.Handler {
+func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -25,7 +25,7 @@ func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager) http.Handler {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	authHandler := auth.NewHandler(pool, tokens)
-	curadoriaHandler := curadoria.NewHandler(pool)
+	curadoriaHandler := curadoria.NewHandler(pool, uploadsDir)
 	simuladoHandler := simulado.NewHandler(pool)
 
 	r.Route("/api", func(r chi.Router) {
@@ -71,6 +71,7 @@ func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager) http.Handler {
 			r.Use(auth.RequireAuth(tokens))
 			r.Use(auth.RequireAdmin)
 
+			r.Post("/uploads", curadoriaHandler.UploadImagem)
 			r.Post("/categorias", curadoriaHandler.CreateCategoria)
 			r.Get("/questoes", curadoriaHandler.ListQuestoes)
 			r.Post("/questoes", curadoriaHandler.CreateQuestao)

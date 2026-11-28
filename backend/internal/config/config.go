@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseURL            string
 	JWTSecret              string
 	JWTExpiresIn           time.Duration
+	UploadsDir             string
 	AdminBootstrapName     string
 	AdminBootstrapEmail    string
 	AdminBootstrapPassword string
@@ -48,11 +49,17 @@ func Load() (*Config, error) {
 		adminName = "Administrador"
 	}
 
+	uploadsDir := strings.TrimSpace(os.Getenv("UPLOADS_DIR"))
+	if uploadsDir == "" {
+		uploadsDir = "/data/uploads"
+	}
+
 	return &Config{
 		Port:                   port,
 		DatabaseURL:            dbURL,
 		JWTSecret:              jwtSecret,
 		JWTExpiresIn:           time.Duration(expiresHours) * time.Hour,
+		UploadsDir:             uploadsDir,
 		AdminBootstrapName:     adminName,
 		AdminBootstrapEmail:    strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_BOOTSTRAP_EMAIL"))),
 		AdminBootstrapPassword: os.Getenv("ADMIN_BOOTSTRAP_PASSWORD"),
