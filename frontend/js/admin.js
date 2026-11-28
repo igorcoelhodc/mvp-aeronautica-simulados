@@ -1,6 +1,7 @@
 // admin.js — Painel Administrativo por Cards Expansíveis (Categorias, Questões com Imagens e Gestão de Alunos)
 
 import { apiRequest, apiUpload, getToken } from './api.js';
+import { initNavbar } from './navbar.js';
 
 const IMAGE_FIELD_KEYS = [
   'enunciado_imagem_url',
@@ -47,10 +48,12 @@ function generateStrongPassword(length = 14) {
   return chars.join('');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function bootstrapAdminPage() {
   const loadingEl = document.getElementById('admin-loading');
   const contentEl = document.getElementById('admin-content');
   const emptyHintEl = document.getElementById('admin-empty-hint');
+  const desktopSlot = document.getElementById('admin-desktop-slot');
+  const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
 
   // Cards & Painéis expansíveis
   const cardButtons = document.querySelectorAll('[data-admin-card]');
@@ -156,7 +159,27 @@ document.addEventListener('DOMContentLoaded', () => {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  // Controle dos Cards Expansíveis
+  // Controle dos Cards Expansíveis (Acordeão no Mobile < 768px / Painel abaixo da grade no Desktop >= 768px)
+  function mountPanelForViewport(panelKey) {
+    const panelEl = document.querySelector(`[data-admin-panel="${panelKey}"]`);
+    if (!panelEl) return null;
+
+    if (mobileMediaQuery.matches) {
+      const mobileSlot = document.querySelector(`[data-mobile-slot="${panelKey}"]`);
+      if (mobileSlot && panelEl.parentElement !== mobileSlot) {
+        mobileSlot.appendChild(panelEl);
+      }
+      panelEl.classList.add('mt-4');
+    } else {
+      if (desktopSlot && panelEl.parentElement !== desktopSlot) {
+        desktopSlot.appendChild(panelEl);
+      }
+      panelEl.classList.remove('mt-4');
+    }
+
+    return panelEl;
+  }
+
   function setActivePanel(panelKey, { allowToggleClose = false, scrollToPanel = false } = {}) {
     if (allowToggleClose && activePanelKey === panelKey) {
       activePanelKey = null;
@@ -171,23 +194,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let targetPanelEl = null;
+    if (activePanelKey) {
+      targetPanelEl = mountPanelForViewport(activePanelKey);
+    }
+
     panels.forEach((panel) => {
       const isSelected = panel.dataset.adminPanel === activePanelKey;
       panel.classList.toggle('hidden', !isSelected);
-      if (isSelected) targetPanelEl = panel;
     });
 
     emptyHintEl?.classList.toggle('hidden', Boolean(activePanelKey));
 
     if (scrollToPanel && targetPanelEl) {
-      targetPanelEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      requestAnimationFrame(() => {
+        targetPanelEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     }
   }
+
+  mobileMediaQuery.addEventListener('change', () => {
+    if (activePanelKey) {
+      mountPanelForViewport(activePanelKey);
+    }
+  });
 
   cardButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.adminCard;
-      setActivePanel(target, { allowToggleClose: true, scrollToPanel: false });
+      const willOpen = !(activePanelKey === target);
+      setActivePanel(target, {
+        allowToggleClose: true,
+        scrollToPanel: mobileMediaQuery.matches && willOpen,
+      });
       if (activePanelKey === 'alunos') {
         loadAlunos().catch((err) => showFeedback(alunosFeedback, err.message || 'Erro ao carregar alunos.'));
       }
@@ -987,6 +1025,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      initNavbar(usuario);
       initImageWidgets();
 
       loadingEl?.classList.add('hidden');
@@ -999,4 +1038,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   initAdminPage();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrapAdminPage);
+} else {
+  bootstrapAdminPage();
+}

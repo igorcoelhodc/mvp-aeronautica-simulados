@@ -44,7 +44,7 @@
     <div class="blob bg-secondary/40 w-80 h-80 top-[20%] right-[-5%]"></div>
 
     <!-- Navegação Padronizada -->
-    <header id="app-navbar" data-page="dashboard"></header>
+    <header id="app-navbar" data-page="dashboard" class="relative z-50"></header>
 
     <!-- Estado de Validação de Sessão -->
     <div id="dashboard-loading" class="relative z-10 flex-1 flex items-center justify-center px-6 pt-28 pb-16">
@@ -163,15 +163,11 @@
 
     </main>
 
-    <!-- Footer -->
-    <footer class="w-full bg-carbon py-8 border-t border-white/10 relative z-20">
-        <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-white/50">
-            <p>&copy; 2026 Aeronáutica Simulados.</p>
-            <a href="./index.html" class="hover:text-white transition-colors">Voltar à página inicial</a>
-        </div>
-    </footer>
+    <!-- Rodapé Padronizado -->
+    <footer id="app-footer"></footer>
 
     <script type="module" src="./js/navbar.js"></script>
+    <script type="module" src="./js/footer.js"></script>
     <script type="module" src="./js/dashboard.js"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"aeronautica-simulados/backend/internal/analytics"
 	"aeronautica-simulados/backend/internal/auth"
 	"aeronautica-simulados/backend/internal/curadoria"
 	"aeronautica-simulados/backend/internal/simulado"
@@ -15,7 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string) http.Handler {
+func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string, analyticsSalt string) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -27,6 +28,7 @@ func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string)
 	authHandler := auth.NewHandler(pool, tokens)
 	curadoriaHandler := curadoria.NewHandler(pool, uploadsDir)
 	simuladoHandler := simulado.NewHandler(pool)
+	analyticsHandler := analytics.NewHandler(pool, tokens, analyticsSalt)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
@@ -49,6 +51,8 @@ func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string)
 				"database": "connected",
 			})
 		})
+
+		r.Post("/telemetry/events", analyticsHandler.RecordEvent)
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", authHandler.Register)

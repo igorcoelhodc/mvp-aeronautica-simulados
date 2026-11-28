@@ -64,6 +64,14 @@ body {
   box-shadow: 0 12px 32px rgba(30, 136, 229, 0.18);
 }
 
+.admin-card-chevron {
+  transition: transform 0.2s ease;
+}
+
+.admin-card-active .admin-card-chevron {
+  transform: rotate(180deg);
+}
+
 @keyframes panelSlideIn {
   from {
     opacity: 0;

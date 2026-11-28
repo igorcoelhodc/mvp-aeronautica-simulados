@@ -1,6 +1,7 @@
 // navbar.js — Navbar padronizada, baseada na sessão e responsiva para todas as páginas
 
 import { apiRequest, clearToken, getToken } from './api.js';
+import { initTelemetry } from './telemetry.js';
 
 let beforeNavigateGuard = null;
 let activeScrollHandler = null;
@@ -311,11 +312,18 @@ function buildNavbarDOM(mountEl, activePage, usuario) {
   }
 }
 
-export async function initNavbar() {
+export async function initNavbar(preloadedUser = undefined) {
   const mountEl = document.getElementById('app-navbar');
   if (!mountEl) return;
 
+  mountEl.classList.add('relative', 'z-50');
   const activePage = detectActivePage(mountEl);
+
+  // Se o chamador já validou o usuário (ex.: admin.js ou dashboard.js), renderiza diretamente
+  if (preloadedUser !== undefined) {
+    buildNavbarDOM(mountEl, activePage, preloadedUser);
+    return;
+  }
 
   // Renderização imediata como Visitante para evitar layout shift
   buildNavbarDOM(mountEl, activePage, null);
@@ -341,6 +349,13 @@ export async function initNavbar() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function bootstrapSharedHeader() {
   initNavbar();
-});
+  initTelemetry();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrapSharedHeader);
+} else {
+  bootstrapSharedHeader();
+}

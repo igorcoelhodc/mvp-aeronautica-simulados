@@ -35,7 +35,7 @@ func main() {
 	}
 
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.JWTExpiresIn)
-	router := httpapi.NewRouter(pool, tokens, cfg.UploadsDir)
+	router := httpapi.NewRouter(pool, tokens, cfg.UploadsDir, cfg.AnalyticsIPSalt)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

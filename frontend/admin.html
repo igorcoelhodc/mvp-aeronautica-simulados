@@ -42,7 +42,7 @@
     <div class="blob bg-secondary/40 w-80 h-80 top-[25%] right-[-5%]"></div>
 
     <!-- Navegação Padronizada -->
-    <header id="app-navbar" data-page="admin"></header>
+    <header id="app-navbar" data-page="admin" class="relative z-50"></header>
 
     <!-- Estado de Validação de Acesso -->
     <div id="admin-loading" class="relative z-10 flex-1 flex items-center justify-center px-6 pt-28 pb-16">
@@ -69,63 +69,87 @@
             </div>
         </section>
 
-        <!-- Menu por Cards de Ação Expansíveis -->
-        <section aria-label="Menu do painel administrativo" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Menu por Cards de Ação Expansíveis (Acordeão em mobile < md, Grade 4 colunas em desktop >= md) -->
+        <section aria-label="Menu do painel administrativo" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Card 1: Categorias -->
-            <button type="button" data-admin-card="categorias" aria-expanded="false" class="admin-card text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
-                <div class="flex items-center justify-between gap-3 w-full">
-                    <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
-                        <i class="ph-fill ph-folders"></i>
+            <div class="flex flex-col">
+                <button type="button" data-admin-card="categorias" aria-expanded="false" class="admin-card w-full h-full text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                    <div class="flex items-center justify-between gap-3 w-full">
+                        <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
+                            <i class="ph-fill ph-folders"></i>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="card-count-categorias" class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-poppins font-semibold">0</span>
+                            <i class="ph-bold ph-caret-down md:hidden admin-card-chevron text-carbon/50 text-lg"></i>
+                        </div>
                     </div>
-                    <span id="card-count-categorias" class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-poppins font-semibold">0</span>
-                </div>
-                <div>
-                    <h2 class="font-poppins font-bold text-lg text-carbon">Categorias</h2>
-                    <p class="text-xs text-carbon/70 mt-1">Criar e consultar combinações de licença + matéria.</p>
-                </div>
-            </button>
+                    <div>
+                        <h2 class="font-poppins font-bold text-lg text-carbon">Categorias</h2>
+                        <p class="text-xs text-carbon/70 mt-1">Criar e consultar combinações de licença + matéria.</p>
+                    </div>
+                </button>
+                <div data-mobile-slot="categorias" class="md:hidden"></div>
+            </div>
 
             <!-- Card 2: Nova Questão -->
-            <button type="button" data-admin-card="nova-questao" aria-expanded="false" class="admin-card text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
-                <div class="flex items-center justify-between gap-3 w-full">
-                    <div class="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-2xl">
-                        <i class="ph-fill ph-note-pencil"></i>
+            <div class="flex flex-col">
+                <button type="button" data-admin-card="nova-questao" aria-expanded="false" class="admin-card w-full h-full text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                    <div class="flex items-center justify-between gap-3 w-full">
+                        <div class="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-2xl">
+                            <i class="ph-fill ph-note-pencil"></i>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="card-badge-questao" class="px-3 py-1 rounded-full bg-accent/15 text-accent text-xs font-poppins font-semibold">Cadastrar</span>
+                            <i class="ph-bold ph-caret-down md:hidden admin-card-chevron text-carbon/50 text-lg"></i>
+                        </div>
                     </div>
-                    <span id="card-badge-questao" class="px-3 py-1 rounded-full bg-accent/15 text-accent text-xs font-poppins font-semibold">Cadastrar</span>
-                </div>
-                <div>
-                    <h2 class="font-poppins font-bold text-lg text-carbon">Nova Questão</h2>
-                    <p class="text-xs text-carbon/70 mt-1">Cadastrar ou editar questão comentada com imagens.</p>
-                </div>
-            </button>
+                    <div>
+                        <h2 class="font-poppins font-bold text-lg text-carbon">Nova Questão</h2>
+                        <p class="text-xs text-carbon/70 mt-1">Cadastrar ou editar questão comentada com imagens.</p>
+                    </div>
+                </button>
+                <div data-mobile-slot="nova-questao" class="md:hidden"></div>
+            </div>
 
             <!-- Card 3: Banco de Questões -->
-            <button type="button" data-admin-card="banco-questoes" aria-expanded="false" class="admin-card text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
-                <div class="flex items-center justify-between gap-3 w-full">
-                    <div class="w-12 h-12 rounded-2xl bg-secondary/15 text-primary flex items-center justify-center text-2xl">
-                        <i class="ph-fill ph-database"></i>
+            <div class="flex flex-col">
+                <button type="button" data-admin-card="banco-questoes" aria-expanded="false" class="admin-card w-full h-full text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                    <div class="flex items-center justify-between gap-3 w-full">
+                        <div class="w-12 h-12 rounded-2xl bg-secondary/15 text-primary flex items-center justify-center text-2xl">
+                            <i class="ph-fill ph-database"></i>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="card-count-questoes" class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-poppins font-semibold">0</span>
+                            <i class="ph-bold ph-caret-down md:hidden admin-card-chevron text-carbon/50 text-lg"></i>
+                        </div>
                     </div>
-                    <span id="card-count-questoes" class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-poppins font-semibold">0</span>
-                </div>
-                <div>
-                    <h2 class="font-poppins font-bold text-lg text-carbon">Banco de Questões</h2>
-                    <p class="text-xs text-carbon/70 mt-1">Filtrar, editar, ativar e desativar questões.</p>
-                </div>
-            </button>
+                    <div>
+                        <h2 class="font-poppins font-bold text-lg text-carbon">Banco de Questões</h2>
+                        <p class="text-xs text-carbon/70 mt-1">Filtrar, editar, ativar e desativar questões.</p>
+                    </div>
+                </button>
+                <div data-mobile-slot="banco-questoes" class="md:hidden"></div>
+            </div>
 
             <!-- Card 4: Alunos -->
-            <button type="button" data-admin-card="alunos" aria-expanded="false" class="admin-card text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
-                <div class="flex items-center justify-between gap-3 w-full">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">
-                        <i class="ph-fill ph-users-three"></i>
+            <div class="flex flex-col">
+                <button type="button" data-admin-card="alunos" aria-expanded="false" class="admin-card w-full h-full text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                    <div class="flex items-center justify-between gap-3 w-full">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">
+                            <i class="ph-fill ph-users-three"></i>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="card-count-alunos" class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-poppins font-semibold">0</span>
+                            <i class="ph-bold ph-caret-down md:hidden admin-card-chevron text-carbon/50 text-lg"></i>
+                        </div>
                     </div>
-                    <span id="card-count-alunos" class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-poppins font-semibold">0</span>
-                </div>
-                <div>
-                    <h2 class="font-poppins font-bold text-lg text-carbon">Alunos</h2>
-                    <p class="text-xs text-carbon/70 mt-1">Buscar contas de alunos e redefinir senhas.</p>
-                </div>
-            </button>
+                    <div>
+                        <h2 class="font-poppins font-bold text-lg text-carbon">Alunos</h2>
+                        <p class="text-xs text-carbon/70 mt-1">Buscar contas de alunos e redefinir senhas.</p>
+                    </div>
+                </button>
+                <div data-mobile-slot="alunos" class="md:hidden"></div>
+            </div>
         </section>
 
         <!-- Placeholder quando nenhum card está expandido -->
@@ -134,8 +158,11 @@
             Clique em um dos cards acima para expandir a ferramenta desejada.
         </div>
 
+        <!-- Container Desktop para o painel expandido (em mobile o painel é movido para o slot logo abaixo do card) -->
+        <div id="admin-desktop-slot">
+
         <!-- PAINEL 1: Categorias (Licença + Matéria) -->
-        <section id="painel-categorias" data-admin-panel="categorias" class="hidden admin-panel-enter glass-dark rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/60 backdrop-blur-xl space-y-6">
+        <section id="painel-categorias" data-admin-panel="categorias" class="hidden scroll-mt-24 admin-panel-enter glass-dark rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/60 backdrop-blur-xl space-y-6">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
@@ -185,7 +212,7 @@
         </section>
 
         <!-- PAINEL 2: Formulário de Cadastro / Edição de Questões Comentadas -->
-        <section id="painel-nova-questao" data-admin-panel="nova-questao" class="hidden admin-panel-enter glass-dark rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/60 backdrop-blur-xl">
+        <section id="painel-nova-questao" data-admin-panel="nova-questao" class="hidden scroll-mt-24 admin-panel-enter glass-dark rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/60 backdrop-blur-xl">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-2xl">
@@ -354,7 +381,7 @@
         </section>
 
         <!-- PAINEL 3: Banco de Questões (Listagem, Filtros, Editar e Ativar/Desativar) -->
-        <section id="painel-banco-questoes" data-admin-panel="banco-questoes" class="hidden admin-panel-enter bg-white rounded-[2rem] p-6 sm:p-8 shadow-glass border border-gray-100 space-y-6">
+        <section id="painel-banco-questoes" data-admin-panel="banco-questoes" class="hidden scroll-mt-24 admin-panel-enter bg-white rounded-[2rem] p-6 sm:p-8 shadow-glass border border-gray-100 space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-2xl bg-secondary/15 text-primary flex items-center justify-center text-2xl">
@@ -412,7 +439,7 @@
         </section>
 
         <!-- PAINEL 4: Gestão de Alunos e Reset de Senha -->
-        <section id="painel-alunos" data-admin-panel="alunos" class="hidden admin-panel-enter bg-white rounded-[2rem] p-6 sm:p-8 shadow-glass border border-gray-100 space-y-6">
+        <section id="painel-alunos" data-admin-panel="alunos" class="hidden scroll-mt-24 admin-panel-enter bg-white rounded-[2rem] p-6 sm:p-8 shadow-glass border border-gray-100 space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">
@@ -448,6 +475,8 @@
 
             <div id="lista-alunos" class="space-y-3"></div>
         </section>
+
+        </div>
 
     </main>
 
@@ -505,15 +534,11 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="w-full bg-carbon py-8 border-t border-white/10 relative z-20">
-        <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-white/50">
-            <p>&copy; 2026 Aeronáutica Simulados — Painel Administrativo.</p>
-            <a href="./index.html" class="hover:text-white transition-colors">Voltar ao site</a>
-        </div>
-    </footer>
+    <!-- Rodapé Padronizado -->
+    <footer id="app-footer"></footer>
 
     <script type="module" src="./js/navbar.js"></script>
+    <script type="module" src="./js/footer.js"></script>
     <script type="module" src="./js/admin.js"></script>
 </body>
 </html>

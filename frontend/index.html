@@ -20,7 +20,7 @@
     <!-- Tema Compartilhado -->
     <link rel="stylesheet" href="./css/theme.css">
 </head>
-<body class="font-inter antialiased relative">
+<body class="font-inter antialiased relative min-h-screen flex flex-col">
 
     <!-- BACKGROUND DINÂMICO DE NAVEGAÇÃO AÉREA -->
     <!-- Elemento 1: VOR / Rosa dos Ventos -->
@@ -75,8 +75,9 @@
     <div class="blob bg-secondary/40 w-80 h-80 top-[20%] right-[-5%]"></div>
 
     <!-- Navegação Padronizada -->
-    <header id="app-navbar" data-page="index"></header>
+    <header id="app-navbar" data-page="index" class="relative z-50"></header>
 
+    <main class="flex-1">
     <!-- Hero Section -->
     <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden z-10">
         <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
@@ -207,49 +208,12 @@
             <p class="mt-4 text-sm text-carbon/60 font-medium">Nenhum cartão de crédito necessário no cadastro.</p>
         </div>
     </section>
+    </main>
 
-    <!-- Footer -->
-    <footer class="w-full bg-carbon pt-16 pb-8 border-t border-white/10 relative z-20">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="grid md:grid-cols-4 gap-8 mb-12">
-                <div class="md:col-span-2">
-                    <a href="#" class="flex items-center gap-2 mb-4">
-                        <i class="ph-fill ph-airplane-tilt text-3xl text-primary"></i>
-                        <span class="font-poppins font-bold text-2xl text-white tracking-tight">
-                            Aeronáutica<span class="text-primary">Simulados</span>
-                        </span>
-                    </a>
-                    <p class="text-white/60 text-sm max-w-sm">
-                        A plataforma de ensino e simulados aeronáuticos feita para a nova geração da aviação. Moderna, leve e precisa.
-                    </p>
-                </div>
-                <div>
-                    <h4 class="font-poppins font-semibold text-white mb-4">Plataforma</h4>
-                    <ul class="space-y-2 text-white/60 text-sm">
-                        <li><a href="#" class="hover:text-primary transition-colors">Simulados ANAC</a></li>
-                        <li><a href="#" class="hover:text-primary transition-colors">Cursos Teóricos</a></li>
-                        <li><a href="#" class="hover:text-primary transition-colors">Planos e Preços</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-poppins font-semibold text-white mb-4">Contato</h4>
-                    <ul class="space-y-2 text-white/60 text-sm">
-                        <li><a href="#" class="hover:text-primary transition-colors flex items-center gap-2"><i class="ph ph-envelope"></i> ola@aeronauticasimulados.com.br</a></li>
-                        <li><a href="#" class="hover:text-primary transition-colors flex items-center gap-2"><i class="ph ph-instagram-logo"></i> @aeronauticasimulados</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/40">
-                <p>&copy; 2026 Aeronáutica Simulados. Feito com ❤️ em Goiânia, no coração do Brasil.</p>
-                <div class="flex gap-4">
-                    <a href="#" class="hover:text-white transition-colors">Termos de Uso</a>
-                    <a href="#" class="hover:text-white transition-colors">Política de Privacidade</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <!-- Rodapé Padronizado -->
+    <footer id="app-footer"></footer>
 
     <script type="module" src="./js/navbar.js"></script>
+    <script type="module" src="./js/footer.js"></script>
 </body>
 </html>
