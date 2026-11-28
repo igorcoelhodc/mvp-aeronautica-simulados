@@ -68,6 +68,11 @@
                     Olá, <span id="welcome-name" class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Piloto</span>!
                 </h1>
                 <p class="text-carbon/75 mt-2">Critério oficial ANAC: 20 questões aleatórias por matéria, 30 minutos e aprovação a partir de 70%.</p>
+                <div class="mt-4">
+                    <button id="btn-alterar-senha" type="button" class="hidden glass px-4 py-2 rounded-xl border border-primary/25 text-xs sm:text-sm font-poppins font-semibold text-primary hover:bg-primary/10 transition-all items-center gap-2">
+                        <i class="ph-bold ph-key text-base"></i> Alterar Senha
+                    </button>
+                </div>
             </div>
 
             <div class="grid grid-cols-3 gap-4">
@@ -162,6 +167,54 @@
         </section>
 
     </main>
+
+    <!-- Modal Alterar Senha (visível exclusivamente para ALUNO) -->
+    <div id="alterar-senha-modal" role="dialog" aria-modal="true" aria-labelledby="alterar-senha-title" class="hidden fixed inset-0 z-[100] bg-carbon/75 backdrop-blur-md items-center justify-center p-4 sm:p-6">
+        <div class="relative w-full max-w-md glass rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/90 space-y-5">
+            <button id="alterar-senha-close" type="button" aria-label="Fechar modal" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-cloud text-carbon/70 hover:text-accent hover:bg-white transition-colors flex items-center justify-center">
+                <i class="ph-bold ph-x text-lg"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl shrink-0">
+                    <i class="ph-fill ph-lock-key"></i>
+                </div>
+                <div>
+                    <h2 id="alterar-senha-title" class="font-poppins font-bold text-xl text-carbon">Alterar Senha</h2>
+                    <p class="text-xs text-carbon/70">Informe sua senha atual e defina uma nova senha (mínimo 8 caracteres).</p>
+                </div>
+            </div>
+
+            <form id="alterar-senha-form" class="space-y-4">
+                <div>
+                    <label for="alt-senha-atual" class="block text-sm font-medium text-carbon mb-1.5">Senha atual</label>
+                    <input id="alt-senha-atual" type="password" required autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <div>
+                    <label for="alt-nova-senha" class="block text-sm font-medium text-carbon mb-1.5">Nova senha</label>
+                    <input id="alt-nova-senha" type="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo de 8 caracteres" class="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <div>
+                    <label for="alt-confirmar-senha" class="block text-sm font-medium text-carbon mb-1.5">Confirmar nova senha</label>
+                    <input id="alt-confirmar-senha" type="password" required minlength="8" autocomplete="new-password" placeholder="Repita a nova senha" class="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <p id="alterar-senha-feedback" role="alert" class="hidden px-4 py-3 rounded-xl border text-sm font-medium"></p>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button id="alterar-senha-cancel" type="button" class="glass px-5 py-2.5 rounded-xl font-poppins font-semibold text-sm text-carbon hover:bg-white transition-all">
+                        Cancelar
+                    </button>
+                    <button id="alterar-senha-submit" type="submit" class="bg-accent text-white px-6 py-2.5 rounded-xl font-poppins font-semibold text-sm shadow-lg shadow-accent/30 hover:shadow-glow transition-all inline-flex items-center gap-2">
+                        <i class="ph-bold ph-check-circle text-base"></i>
+                        <span id="alterar-senha-submit-label">Salvar Senha</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Rodapé Padronizado -->
     <footer id="app-footer"></footer>

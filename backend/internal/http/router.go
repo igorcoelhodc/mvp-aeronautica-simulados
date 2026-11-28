@@ -57,13 +57,14 @@ func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string,
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", authHandler.Register)
 			r.Post("/login", authHandler.Login)
-			r.With(auth.RequireAuth(tokens)).Get("/me", authHandler.Me)
+			r.With(auth.RequireAuth(tokens, pool)).Get("/me", authHandler.Me)
+			r.With(auth.RequireAuth(tokens, pool)).Post("/alterar-senha", authHandler.AlterarSenha)
 		})
 
-		r.With(auth.RequireAuth(tokens)).Get("/categorias", curadoriaHandler.ListCategorias)
+		r.With(auth.RequireAuth(tokens, pool)).Get("/categorias", curadoriaHandler.ListCategorias)
 
 		r.Route("/simulados", func(r chi.Router) {
-			r.Use(auth.RequireAuth(tokens))
+			r.Use(auth.RequireAuth(tokens, pool))
 
 			r.Post("/", simuladoHandler.Create)
 			r.Get("/", simuladoHandler.List)
@@ -72,7 +73,7 @@ func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string,
 		})
 
 		r.Route("/admin", func(r chi.Router) {
-			r.Use(auth.RequireAuth(tokens))
+			r.Use(auth.RequireAuth(tokens, pool))
 			r.Use(auth.RequireAdmin)
 
 			r.Post("/uploads", curadoriaHandler.UploadImagem)
@@ -82,7 +83,9 @@ func NewRouter(pool *pgxpool.Pool, tokens *auth.TokenManager, uploadsDir string,
 			r.Put("/questoes/{id}", curadoriaHandler.UpdateQuestao)
 			r.Delete("/questoes/{id}", curadoriaHandler.DeleteQuestao)
 			r.Get("/alunos", curadoriaHandler.ListAlunos)
+			r.Patch("/alunos/{id}/status", curadoriaHandler.UpdateStatusAluno)
 			r.Post("/alunos/{id}/reset-senha", curadoriaHandler.ResetSenhaAluno)
+			r.Get("/analytics/resumo", analyticsHandler.GetResumo)
 		})
 	})
 

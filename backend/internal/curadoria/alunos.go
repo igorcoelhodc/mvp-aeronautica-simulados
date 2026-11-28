@@ -3,7 +3,9 @@ package curadoria
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -19,6 +21,7 @@ type AlunoResponse struct {
 	Nome                 string    `json:"nome"`
 	Email                string    `json:"email"`
 	Perfil               string    `json:"perfil"`
+	Ativo                bool      `json:"ativo"`
 	CriadoEm             time.Time `json:"criado_em"`
 	TotalSimulados       int       `json:"total_simulados"`
 	SimuladosFinalizados int       `json:"simulados_finalizados"`
@@ -28,26 +31,42 @@ type resetSenhaRequest struct {
 	NovaSenha string `json:"nova_senha"`
 }
 
-// ListAlunos lista usuários com perfil ALUNO com busca opcional (q) em nome ou e-mail (somente ADMIN).
+type updateStatusAlunoRequest struct {
+	Ativo *bool `json:"ativo"`
+}
+
+// ListAlunos lista usuários com perfil ALUNO com busca opcional (q) em nome/e-mail e filtro opcional por ativo (somente ADMIN).
 func (h *Handler) ListAlunos(w http.ResponseWriter, r *http.Request) {
-	busca := strings.TrimSpace(r.URL.Query().Get("q"))
+	query := r.URL.Query()
+	busca := strings.TrimSpace(query.Get("q"))
+	ativoRaw := strings.TrimSpace(query.Get("ativo"))
 
 	args := []any{"ALUNO"}
+	conditions := []string{"u.perfil = $1"}
+
+	if ativoRaw != "" {
+		ativoVal, err := strconv.ParseBool(ativoRaw)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "Parâmetro ativo deve ser true ou false.")
+			return
+		}
+		args = append(args, ativoVal)
+		conditions = append(conditions, fmt.Sprintf("u.ativo = $%d", len(args)))
+	}
+
+	if busca != "" {
+		args = append(args, "%"+busca+"%")
+		conditions = append(conditions, fmt.Sprintf("(u.nome ILIKE $%d OR u.email ILIKE $%d)", len(args), len(args)))
+	}
+
 	sqlQuery := `
-		SELECT u.id::text, u.nome, u.email, u.perfil, u.criado_em,
+		SELECT u.id::text, u.nome, u.email, u.perfil, u.ativo, u.criado_em,
 		       COUNT(s.id)::int AS total_simulados,
 		       COUNT(CASE WHEN s.status = 'FINALIZADO' THEN 1 END)::int AS simulados_finalizados
 		FROM usuarios u
 		LEFT JOIN simulados s ON s.usuario_id = u.id
-		WHERE u.perfil = $1`
-
-	if busca != "" {
-		args = append(args, "%"+busca+"%")
-		sqlQuery += " AND (u.nome ILIKE $2 OR u.email ILIKE $2)"
-	}
-
-	sqlQuery += `
-		GROUP BY u.id, u.nome, u.email, u.perfil, u.criado_em
+		WHERE ` + strings.Join(conditions, " AND ") + `
+		GROUP BY u.id, u.nome, u.email, u.perfil, u.ativo, u.criado_em
 		ORDER BY u.criado_em DESC, u.nome ASC`
 
 	rows, err := h.pool.Query(r.Context(), sqlQuery, args...)
@@ -65,6 +84,7 @@ func (h *Handler) ListAlunos(w http.ResponseWriter, r *http.Request) {
 			&a.Nome,
 			&a.Email,
 			&a.Perfil,
+			&a.Ativo,
 			&a.CriadoEm,
 			&a.TotalSimulados,
 			&a.SimuladosFinalizados,
@@ -81,6 +101,74 @@ func (h *Handler) ListAlunos(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"alunos": alunos,
+	})
+}
+
+// UpdateStatusAluno habilita ou desabilita o acesso de um ALUNO (somente ADMIN; bloqueia alteração de ADMIN).
+func (h *Handler) UpdateStatusAluno(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(chi.URLParam(r, "id"))
+	if !isValidUUID(id) {
+		writeJSONError(w, http.StatusBadRequest, "ID do aluno inválido.")
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var req updateStatusAlunoRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Corpo JSON inválido.")
+		return
+	}
+
+	if req.Ativo == nil {
+		writeJSONError(w, http.StatusBadRequest, "Informe o campo booleano 'ativo' (true ou false).")
+		return
+	}
+
+	var perfil string
+	err := h.pool.QueryRow(
+		r.Context(),
+		`SELECT perfil FROM usuarios WHERE id = $1::uuid`,
+		id,
+	).Scan(&perfil)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeJSONError(w, http.StatusNotFound, "Usuário não encontrado.")
+			return
+		}
+		writeJSONError(w, http.StatusInternalServerError, "Erro ao consultar usuário.")
+		return
+	}
+
+	if perfil != "ALUNO" {
+		writeJSONError(w, http.StatusForbidden, "Não é permitido alterar o status de um administrador por esta rota.")
+		return
+	}
+
+	var updatedID string
+	var updatedAtivo bool
+	err = h.pool.QueryRow(
+		r.Context(),
+		`UPDATE usuarios
+		 SET ativo = $1
+		 WHERE id = $2::uuid AND perfil = $3
+		 RETURNING id::text, ativo`,
+		*req.Ativo,
+		id,
+		"ALUNO",
+	).Scan(&updatedID, &updatedAtivo)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeJSONError(w, http.StatusNotFound, "Aluno não encontrado.")
+			return
+		}
+		writeJSONError(w, http.StatusInternalServerError, "Erro ao atualizar status do aluno.")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":    updatedID,
+		"ativo": updatedAtivo,
 	})
 }
 

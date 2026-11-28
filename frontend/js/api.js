@@ -1,7 +1,8 @@
-// api.js — Cliente HTTP (fetch) com gestão de Bearer Token
+// api.js — Cliente HTTP (fetch) com gestão de Bearer Token e revogação imediata de conta desabilitada
 
 const API_BASE_URL = '/api';
 const TOKEN_KEY = 'aero_simulados_token';
+const AUTH_NOTICE_KEY = 'aero_auth_notice';
 
 export class ApiError extends Error {
   constructor(message, status, data = null) {
@@ -24,6 +25,52 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+export function setAuthNotice(message) {
+  try {
+    if (message) sessionStorage.setItem(AUTH_NOTICE_KEY, message);
+  } catch {
+    // Ignora erro de storage
+  }
+}
+
+export function consumeAuthNotice() {
+  try {
+    const msg = sessionStorage.getItem(AUTH_NOTICE_KEY);
+    if (msg) sessionStorage.removeItem(AUTH_NOTICE_KEY);
+    return msg || '';
+  } catch {
+    return '';
+  }
+}
+
+function isPublicPagePath() {
+  const path = window.location.pathname.toLowerCase();
+  return path === '/' || path.endsWith('/index.html') || path.endsWith('/login.html');
+}
+
+function handleAuthFailure(endpoint, status, data, message) {
+  const isLoginOrRegister = endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/register');
+  if (isLoginOrRegister) return;
+
+  if (status === 401) {
+    clearToken();
+    return;
+  }
+
+  const isDisabledAccount =
+    status === 403 &&
+    (data?.code === 'ACCOUNT_DISABLED' ||
+      (typeof message === 'string' && message.toLowerCase().includes('conta desabilitada')));
+
+  if (isDisabledAccount) {
+    clearToken();
+    setAuthNotice(message);
+    if (!isPublicPagePath()) {
+      window.location.href = './login.html';
+    }
+  }
+}
+
 export async function apiRequest(endpoint, options = {}) {
   const { headers: customHeaders = {}, ...fetchOptions } = options;
   const token = getToken();
@@ -42,10 +89,8 @@ export async function apiRequest(endpoint, options = {}) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    if (response.status === 401 && !endpoint.startsWith('/auth/login') && !endpoint.startsWith('/auth/register')) {
-      clearToken();
-    }
     const message = data?.error || data?.message || 'Erro inesperado ao comunicar com a API.';
+    handleAuthFailure(endpoint, response.status, data, message);
     throw new ApiError(message, response.status, data);
   }
 
@@ -65,10 +110,8 @@ export async function apiUpload(endpoint, formData) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      clearToken();
-    }
     const message = data?.error || data?.message || 'Erro ao enviar arquivo para a API.';
+    handleAuthFailure(endpoint, response.status, data, message);
     throw new ApiError(message, response.status, data);
   }
 

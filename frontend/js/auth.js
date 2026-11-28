@@ -1,6 +1,6 @@
 // auth.js — Lógica das abas de Login/Cadastro e validação de sessão (/api/auth/me)
 
-import { apiRequest, clearToken, getToken, setToken } from './api.js';
+import { apiRequest, clearToken, consumeAuthNotice, getToken, setToken } from './api.js';
 import { initNavbar } from './navbar.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
   async function verifyExistingSession() {
     if (!getToken()) {
       showAuthForm();
+      const notice = consumeAuthNotice();
+      if (notice) setFeedback(notice, 'error');
       return;
     }
 
@@ -129,9 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       clearToken();
       showAuthForm();
-    } catch {
+    } catch (err) {
       clearToken();
       showAuthForm();
+      initNavbar(null);
+      const notice = consumeAuthNotice() || (err?.status === 403 ? err.message : '');
+      if (notice) setFeedback(notice, 'error');
     }
   }
 
@@ -185,6 +190,18 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify(payload),
         });
 
+        // Novos cadastros entram com ativo = FALSE aguardando liberação manual do admin
+        if (currentMode === 'register' && (data?.aguardando_aprovacao || !data?.token)) {
+          form.reset();
+          setMode('login');
+          setFeedback(
+            data?.message ||
+              'Cadastro realizado com sucesso! Sua conta está aguardando liberação do instrutor para acessar os simulados.',
+            'success'
+          );
+          return;
+        }
+
         setToken(data.token);
 
         const meData = await apiRequest('/auth/me', { method: 'GET' });
@@ -192,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (usuario?.perfil === 'ADMIN') {
           showSession(usuario);
-          initNavbar();
+          initNavbar(usuario);
         } else {
           window.location.href = './dashboard.html';
         }

@@ -62,6 +62,7 @@ function bootstrapAdminPage() {
   const cardBadgeQuestao = document.getElementById('card-badge-questao');
   const cardCountQuestoes = document.getElementById('card-count-questoes');
   const cardCountAlunos = document.getElementById('card-count-alunos');
+  const cardOnlineNum = document.getElementById('card-online-num');
 
   // Categorias
   const categoriaForm = document.getElementById('categoria-form');
@@ -103,10 +104,30 @@ function bootstrapAdminPage() {
   // Gestão de Alunos
   const alunosFiltroForm = document.getElementById('alunos-filtro-form');
   const alunosBuscaInput = document.getElementById('alunos-busca');
+  const alunosFiltroAtivo = document.getElementById('alunos-filtro-ativo');
   const alunosLimparBtn = document.getElementById('alunos-limpar-btn');
   const alunosCountBadge = document.getElementById('alunos-count-badge');
   const alunosFeedback = document.getElementById('alunos-feedback');
   const listaAlunosEl = document.getElementById('lista-alunos');
+
+  // Métricas (Chart.js + Polling 10s)
+  const metricasDiasSelect = document.getElementById('metricas-dias');
+  const btnAtualizarMetricas = document.getElementById('btn-atualizar-metricas');
+  const metricasUltimaAtualizacao = document.getElementById('metricas-ultima-atualizacao');
+  const metricasFeedback = document.getElementById('metricas-feedback');
+  const kpiOnlineAgora = document.getElementById('kpi-online-agora');
+  const kpiSessoesHoje = document.getElementById('kpi-sessoes-hoje');
+  const kpiAutenticadosHoje = document.getElementById('kpi-autenticados-hoje');
+  const kpiDuracaoMedia = document.getElementById('kpi-duracao-media');
+  const kpiPaginasSessao = document.getElementById('kpi-paginas-sessao');
+  const canvasSerieDiaria = document.getElementById('chart-serie-diaria');
+  const emptySerieDiaria = document.getElementById('empty-serie-diaria');
+  const canvasDispositivos = document.getElementById('chart-dispositivos');
+  const emptyDispositivos = document.getElementById('empty-dispositivos');
+  const canvasLocalidades = document.getElementById('chart-localidades');
+  const emptyLocalidades = document.getElementById('empty-localidades');
+  const canvasPaginas = document.getElementById('chart-paginas');
+  const emptyPaginas = document.getElementById('empty-paginas');
 
   // Modal Reset de Senha
   const resetModal = document.getElementById('reset-senha-modal');
@@ -127,6 +148,12 @@ function bootstrapAdminPage() {
   const imageWidgets = new Map();
   let activeUploadsCount = 0;
   let activePanelKey = null;
+
+  let metricasPollTimer = null;
+  let chartSerieDiaria = null;
+  let chartDispositivos = null;
+  let chartLocalidades = null;
+  let chartPaginas = null;
 
   function showFeedback(el, message, type = 'error') {
     if (!el) return;
@@ -205,6 +232,14 @@ function bootstrapAdminPage() {
 
     emptyHintEl?.classList.toggle('hidden', Boolean(activePanelKey));
 
+    if (activePanelKey === 'metricas') {
+      loadMetricas({ silent: false });
+      startMetricasPolling();
+      requestAnimationFrame(resizeMetricasCharts);
+    } else {
+      stopMetricasPolling();
+    }
+
     if (scrollToPanel && targetPanelEl) {
       requestAnimationFrame(() => {
         targetPanelEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -215,6 +250,9 @@ function bootstrapAdminPage() {
   mobileMediaQuery.addEventListener('change', () => {
     if (activePanelKey) {
       mountPanelForViewport(activePanelKey);
+      if (activePanelKey === 'metricas') {
+        requestAnimationFrame(resizeMetricasCharts);
+      }
     }
   });
 
@@ -685,12 +723,18 @@ function bootstrapAdminPage() {
       nameEl.className = 'font-poppins font-semibold text-base text-carbon truncate';
       nameEl.textContent = aluno.nome;
 
+      const statusBadge = document.createElement('span');
+      statusBadge.className = aluno.ativo
+        ? 'px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold'
+        : 'px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold';
+      statusBadge.textContent = aluno.ativo ? 'Habilitado' : 'Desabilitado';
+
       const simsBadge = document.createElement('span');
       simsBadge.className = 'px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-poppins font-semibold';
       const totalSims = Number(aluno.total_simulados ?? 0);
       simsBadge.textContent = `${totalSims} ${totalSims === 1 ? 'simulado' : 'simulados'}`;
 
-      nameLine.append(nameEl, simsBadge);
+      nameLine.append(nameEl, statusBadge, simsBadge);
 
       const emailEl = document.createElement('p');
       emailEl.className = 'text-sm text-carbon/75 break-all';
@@ -705,16 +749,37 @@ function bootstrapAdminPage() {
 
       left.append(nameLine, emailEl, metaEl);
 
+      const actions = document.createElement('div');
+      actions.className = 'flex flex-wrap items-center gap-2 shrink-0';
+
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      if (aluno.ativo) {
+        toggleBtn.className =
+          'px-3.5 py-2.5 rounded-xl bg-white border border-red-200 text-xs sm:text-sm font-poppins font-semibold text-red-600 hover:bg-red-50 transition-all inline-flex items-center justify-center gap-1.5';
+        const blockIcon = document.createElement('i');
+        blockIcon.className = 'ph-bold ph-prohibit text-base';
+        toggleBtn.append(blockIcon, document.createTextNode('Desabilitar'));
+      } else {
+        toggleBtn.className =
+          'px-3.5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs sm:text-sm font-poppins font-semibold hover:bg-emerald-700 transition-all inline-flex items-center justify-center gap-1.5';
+        const checkIcon = document.createElement('i');
+        checkIcon.className = 'ph-bold ph-check-circle text-base';
+        toggleBtn.append(checkIcon, document.createTextNode('Habilitar'));
+      }
+      toggleBtn.addEventListener('click', () => handleToggleStatusAluno(aluno, toggleBtn));
+
       const resetBtn = document.createElement('button');
       resetBtn.type = 'button';
       resetBtn.className =
-        'px-4 py-2.5 rounded-xl bg-white border border-accent/40 text-xs sm:text-sm font-poppins font-semibold text-accent hover:bg-accent hover:text-white transition-all inline-flex items-center justify-center gap-1.5 shrink-0';
+        'px-4 py-2.5 rounded-xl bg-white border border-accent/40 text-xs sm:text-sm font-poppins font-semibold text-accent hover:bg-accent hover:text-white transition-all inline-flex items-center justify-center gap-1.5';
       const keyIcon = document.createElement('i');
       keyIcon.className = 'ph-bold ph-key text-base';
       resetBtn.append(keyIcon, document.createTextNode('Resetar Senha'));
       resetBtn.addEventListener('click', () => openResetSenhaModal(aluno));
 
-      row.append(left, resetBtn);
+      actions.append(toggleBtn, resetBtn);
+      row.append(left, actions);
       listaAlunosEl.appendChild(row);
     });
   }
@@ -833,12 +898,337 @@ function bootstrapAdminPage() {
   async function loadAlunos() {
     const params = new URLSearchParams();
     const busca = alunosBuscaInput?.value.trim() || '';
+    const ativoFilter = alunosFiltroAtivo?.value || '';
     if (busca) params.set('q', busca);
+    if (ativoFilter) params.set('ativo', ativoFilter);
 
     const qs = params.toString();
     const data = await apiRequest(`/admin/alunos${qs ? `?${qs}` : ''}`, { method: 'GET' });
     renderAlunos(data?.alunos || []);
   }
+
+  async function handleToggleStatusAluno(aluno, buttonEl) {
+    const novoStatus = !aluno.ativo;
+    const acao = novoStatus ? 'habilitar' : 'desabilitar';
+    if (
+      !novoStatus &&
+      !window.confirm(`Deseja desabilitar o acesso de ${aluno.nome}? O aluno será desconectado imediatamente.`)
+    ) {
+      return;
+    }
+
+    showFeedback(alunosFeedback, '');
+    if (buttonEl) buttonEl.disabled = true;
+
+    try {
+      await apiRequest(`/admin/alunos/${encodeURIComponent(aluno.id)}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ativo: novoStatus }),
+      });
+      showFeedback(
+        alunosFeedback,
+        novoStatus
+          ? `Acesso de ${aluno.nome} habilitado com sucesso.`
+          : `Acesso de ${aluno.nome} desabilitado imediatamente.`,
+        'success'
+      );
+      await loadAlunos();
+    } catch (err) {
+      showFeedback(alunosFeedback, err.message || `Erro ao ${acao} aluno.`);
+      if (buttonEl) buttonEl.disabled = false;
+    }
+  }
+
+  // Métricas em Tempo Real (Chart.js + Polling inteligente de 10s)
+  function formatDuracao(segundos) {
+    const total = Math.max(0, Math.round(Number(segundos || 0)));
+    if (total < 60) return `${total}s`;
+    const mins = Math.floor(total / 60);
+    const secs = total % 60;
+    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+  }
+
+  function formatDiaCurto(isoDate) {
+    if (!isoDate || typeof isoDate !== 'string') return '';
+    const parts = isoDate.split('-');
+    if (parts.length !== 3) return isoDate;
+    return `${parts[2]}/${parts[1]}`;
+  }
+
+  function formatDispositivoLabel(tipo) {
+    switch (tipo) {
+      case 'mobile':
+        return 'Mobile';
+      case 'desktop':
+        return 'Desktop';
+      case 'tablet':
+        return 'Tablet';
+      default:
+        return 'Desconhecido';
+    }
+  }
+
+  function formatLocalidadeLabel(loc) {
+    const parts = [loc.cidade, loc.regiao, loc.pais].filter(
+      (p) => p && p !== 'Desconhecido' && p !== 'Desconhecida'
+    );
+    return parts.length ? parts.join(' - ') : 'Localidade desconhecida';
+  }
+
+  function resizeMetricasCharts() {
+    [chartSerieDiaria, chartDispositivos, chartLocalidades, chartPaginas].forEach((chart) => {
+      if (chart && typeof chart.resize === 'function') {
+        chart.resize();
+      }
+    });
+  }
+
+  function renderMetricasCharts(data) {
+    if (typeof window.Chart === 'undefined') {
+      showFeedback(metricasFeedback, 'Chart.js não pôde ser carregado. Verifique a conexão com o CDN.');
+      return;
+    }
+
+    const serie = data?.serie_diaria || [];
+    const dispositivos = data?.dispositivos || [];
+    const localidades = data?.localidades || [];
+    const paginas = data?.paginas_top || [];
+
+    // 1. Gráfico Linha/Área — Série Diária
+    if (canvasSerieDiaria) {
+      emptySerieDiaria?.classList.toggle('hidden', serie.length > 0);
+      const labels = serie.map((item) => formatDiaCurto(item.dia));
+      const sessoesData = serie.map((item) => item.total_sessoes);
+      const unicosData = serie.map((item) => item.visitantes_unicos_ip);
+
+      if (!chartSerieDiaria) {
+        chartSerieDiaria = new window.Chart(canvasSerieDiaria, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Sessões',
+                data: sessoesData,
+                borderColor: '#1E88E5',
+                backgroundColor: 'rgba(30, 136, 229, 0.14)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3,
+              },
+              {
+                label: 'Visitantes únicos',
+                data: unicosData,
+                borderColor: '#FF6D00',
+                backgroundColor: 'rgba(255, 109, 0, 0.08)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+          },
+        });
+      } else {
+        chartSerieDiaria.data.labels = labels;
+        chartSerieDiaria.data.datasets[0].data = sessoesData;
+        chartSerieDiaria.data.datasets[1].data = unicosData;
+        chartSerieDiaria.update('none');
+      }
+    }
+
+    // 2. Gráfico Rosca — Dispositivos
+    if (canvasDispositivos) {
+      emptyDispositivos?.classList.toggle('hidden', dispositivos.length > 0);
+      const labels = dispositivos.map((d) => formatDispositivoLabel(d.dispositivo_tipo));
+      const values = dispositivos.map((d) => d.total_sessoes);
+      const colors = ['#1E88E5', '#00E5FF', '#FF6D00', '#2C3E50'];
+
+      if (!chartDispositivos) {
+        chartDispositivos = new window.Chart(canvasDispositivos, {
+          type: 'doughnut',
+          data: {
+            labels,
+            datasets: [
+              {
+                data: values,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#FFFFFF',
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: { legend: { position: 'bottom' } },
+          },
+        });
+      } else {
+        chartDispositivos.data.labels = labels;
+        chartDispositivos.data.datasets[0].data = values;
+        chartDispositivos.update('none');
+      }
+    }
+
+    // 3a. Barras Horizontais — Top Localidades
+    if (canvasLocalidades) {
+      emptyLocalidades?.classList.toggle('hidden', localidades.length > 0);
+      const labels = localidades.map((loc) => formatLocalidadeLabel(loc));
+      const values = localidades.map((loc) => loc.total_sessoes);
+
+      if (!chartLocalidades) {
+        chartLocalidades = new window.Chart(canvasLocalidades, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Sessões',
+                data: values,
+                backgroundColor: 'rgba(30, 136, 229, 0.85)',
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+          },
+        });
+      } else {
+        chartLocalidades.data.labels = labels;
+        chartLocalidades.data.datasets[0].data = values;
+        chartLocalidades.update('none');
+      }
+    }
+
+    // 3b. Barras Horizontais — Páginas Mais Acessadas
+    if (canvasPaginas) {
+      emptyPaginas?.classList.toggle('hidden', paginas.length > 0);
+      const labels = paginas.map((p) => p.pagina);
+      const values = paginas.map((p) => p.total_acessos);
+
+      if (!chartPaginas) {
+        chartPaginas = new window.Chart(canvasPaginas, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Acessos',
+                data: values,
+                backgroundColor: 'rgba(255, 109, 0, 0.85)',
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+          },
+        });
+      } else {
+        chartPaginas.data.labels = labels;
+        chartPaginas.data.datasets[0].data = values;
+        chartPaginas.update('none');
+      }
+    }
+  }
+
+  async function loadMetricas({ silent = false } = {}) {
+    const dias = Number(metricasDiasSelect?.value || 7);
+    if (!silent) showFeedback(metricasFeedback, '');
+
+    try {
+      const data = await apiRequest(`/admin/analytics/resumo?dias=${encodeURIComponent(dias)}`, {
+        method: 'GET',
+      });
+
+      const kpis = data?.kpis || {};
+      const online = Number(kpis.online_agora ?? 0);
+      if (cardOnlineNum) cardOnlineNum.textContent = String(online);
+      if (kpiOnlineAgora) kpiOnlineAgora.textContent = String(online);
+      if (kpiSessoesHoje) kpiSessoesHoje.textContent = String(kpis.sessoes_hoje ?? 0);
+      if (kpiAutenticadosHoje) {
+        const aut = Number(kpis.usuarios_autenticados_hoje ?? 0);
+        kpiAutenticadosHoje.textContent = `${aut} ${aut === 1 ? 'usuário autenticado hoje' : 'usuários autenticados hoje'}`;
+      }
+      if (kpiDuracaoMedia) kpiDuracaoMedia.textContent = formatDuracao(kpis.duracao_media_segundos);
+      if (kpiPaginasSessao) {
+        const mediaPag = Number(kpis.media_paginas_sessao ?? 0);
+        kpiPaginasSessao.textContent = mediaPag.toFixed(1).replace('.', ',');
+      }
+
+      if (metricasUltimaAtualizacao) {
+        const agora = new Date().toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+        metricasUltimaAtualizacao.textContent = `• Atualizado às ${agora}`;
+      }
+
+      if (activePanelKey === 'metricas') {
+        renderMetricasCharts(data);
+      }
+    } catch (err) {
+      if (!silent) {
+        showFeedback(metricasFeedback, err.message || 'Erro ao carregar métricas.');
+      }
+    }
+  }
+
+  function stopMetricasPolling() {
+    if (metricasPollTimer) {
+      clearInterval(metricasPollTimer);
+      metricasPollTimer = null;
+    }
+  }
+
+  function startMetricasPolling() {
+    stopMetricasPolling();
+    if (activePanelKey !== 'metricas' || document.visibilityState !== 'visible') {
+      return;
+    }
+    metricasPollTimer = window.setInterval(() => {
+      if (activePanelKey === 'metricas' && document.visibilityState === 'visible') {
+        loadMetricas({ silent: true });
+      } else {
+        stopMetricasPolling();
+      }
+    }, 10000);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && activePanelKey === 'metricas') {
+      loadMetricas({ silent: true });
+      startMetricasPolling();
+    } else {
+      stopMetricasPolling();
+    }
+  });
+
+  metricasDiasSelect?.addEventListener('change', () => {
+    loadMetricas({ silent: false });
+  });
+
+  btnAtualizarMetricas?.addEventListener('click', () => {
+    loadMetricas({ silent: false });
+  });
 
   async function handleDesativarQuestao(id) {
     const confirmed = window.confirm(
@@ -1005,8 +1395,14 @@ function bootstrapAdminPage() {
     }
   });
 
+  alunosFiltroAtivo?.addEventListener('change', () => {
+    showFeedback(alunosFeedback, '');
+    loadAlunos().catch((err) => showFeedback(alunosFeedback, err.message || 'Erro ao filtrar alunos.'));
+  });
+
   alunosLimparBtn?.addEventListener('click', () => {
     if (alunosBuscaInput) alunosBuscaInput.value = '';
+    if (alunosFiltroAtivo) alunosFiltroAtivo.value = '';
     showFeedback(alunosFeedback, '');
     loadAlunos().catch(() => {});
   });
@@ -1031,7 +1427,7 @@ function bootstrapAdminPage() {
       loadingEl?.classList.add('hidden');
       contentEl?.classList.remove('hidden');
 
-      await Promise.all([loadCategorias(), loadQuestoes(), loadAlunos()]);
+      await Promise.all([loadCategorias(), loadQuestoes(), loadAlunos(), loadMetricas({ silent: true })]);
     } catch {
       window.location.href = './login.html';
     }

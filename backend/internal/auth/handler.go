@@ -31,6 +31,7 @@ type UserResponse struct {
 	Nome     string    `json:"nome"`
 	Email    string    `json:"email"`
 	Perfil   string    `json:"perfil"`
+	Ativo    bool      `json:"ativo"`
 	CriadoEm time.Time `json:"criado_em"`
 }
 
@@ -50,6 +51,12 @@ type loginRequest struct {
 	Senha string `json:"senha"`
 }
 
+type alterarSenhaRequest struct {
+	SenhaAtual string `json:"senha_atual"`
+	NovaSenha  string `json:"nova_senha"`
+}
+
+// Register cria uma nova conta de ALUNO com ativo = FALSE (aguardando liberação manual do admin).
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
@@ -86,14 +93,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var user UserResponse
 	err = h.pool.QueryRow(
 		r.Context(),
-		`INSERT INTO usuarios (nome, email, senha_hash, perfil)
-		 VALUES ($1, $2, $3, $4)
-		 RETURNING id::text, nome, email, perfil, criado_em`,
+		`INSERT INTO usuarios (nome, email, senha_hash, perfil, ativo)
+		 VALUES ($1, $2, $3, $4, $5)
+		 RETURNING id::text, nome, email, perfil, ativo, criado_em`,
 		nome,
 		email,
 		senhaHash,
 		"ALUNO",
-	).Scan(&user.ID, &user.Nome, &user.Email, &user.Perfil, &user.CriadoEm)
+		false,
+	).Scan(&user.ID, &user.Nome, &user.Email, &user.Perfil, &user.Ativo, &user.CriadoEm)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -104,15 +112,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.tokens.Generate(user.ID, user.Email, user.Perfil)
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Erro ao gerar token de acesso.")
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, authResponse{
-		Token:   token,
-		Usuario: user,
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"usuario":              user,
+		"aguardando_aprovacao": true,
+		"message":              "Cadastro realizado com sucesso! Sua conta está aguardando liberação do instrutor para acessar os simulados.",
 	})
 }
 
@@ -135,11 +138,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var senhaHash string
 	err := h.pool.QueryRow(
 		r.Context(),
-		`SELECT id::text, nome, email, senha_hash, perfil, criado_em
+		`SELECT id::text, nome, email, senha_hash, perfil, ativo, criado_em
 		 FROM usuarios
 		 WHERE email = $1`,
 		email,
-	).Scan(&user.ID, &user.Nome, &user.Email, &senhaHash, &user.Perfil, &user.CriadoEm)
+	).Scan(&user.ID, &user.Nome, &user.Email, &senhaHash, &user.Perfil, &user.Ativo, &user.CriadoEm)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			writeJSONError(w, http.StatusUnauthorized, "E-mail ou senha inválidos.")
@@ -152,6 +155,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	valid, err := VerifyPassword(req.Senha, senhaHash)
 	if err != nil || !valid {
 		writeJSONError(w, http.StatusUnauthorized, "E-mail ou senha inválidos.")
+		return
+	}
+
+	if !user.Ativo {
+		writeJSONErrorWithCode(w, http.StatusForbidden, AccountDisabledMessage, "ACCOUNT_DISABLED")
 		return
 	}
 
@@ -177,11 +185,11 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	var user UserResponse
 	err := h.pool.QueryRow(
 		r.Context(),
-		`SELECT id::text, nome, email, perfil, criado_em
+		`SELECT id::text, nome, email, perfil, ativo, criado_em
 		 FROM usuarios
 		 WHERE id = $1::uuid`,
 		claims.Subject,
-	).Scan(&user.ID, &user.Nome, &user.Email, &user.Perfil, &user.CriadoEm)
+	).Scan(&user.ID, &user.Nome, &user.Email, &user.Perfil, &user.Ativo, &user.CriadoEm)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			writeJSONError(w, http.StatusUnauthorized, "Usuário não encontrado.")
@@ -193,6 +201,94 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"usuario": user,
+	})
+}
+
+// AlterarSenha permite ao próprio ALUNO autenticado alterar sua senha validando a senha atual.
+// Para perfil ADMIN retorna 403 Forbidden (estrutura pronta para liberação futura).
+func (h *Handler) AlterarSenha(w http.ResponseWriter, r *http.Request) {
+	claims, ok := ClaimsFromContext(r.Context())
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "Usuário não autenticado.")
+		return
+	}
+
+	if claims.Perfil == "ADMIN" {
+		writeJSONError(w, http.StatusForbidden, "Alteração de senha para administradores ainda não está habilitada.")
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var req alterarSenhaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Corpo JSON inválido.")
+		return
+	}
+
+	if req.SenhaAtual == "" {
+		writeJSONError(w, http.StatusBadRequest, "Informe sua senha atual.")
+		return
+	}
+
+	if utf8.RuneCountInString(req.NovaSenha) < 8 {
+		writeJSONError(w, http.StatusBadRequest, "A nova senha deve ter pelo menos 8 caracteres.")
+		return
+	}
+
+	if req.NovaSenha == req.SenhaAtual {
+		writeJSONError(w, http.StatusBadRequest, "A nova senha deve ser diferente da senha atual.")
+		return
+	}
+
+	var senhaHash, perfil string
+	err := h.pool.QueryRow(
+		r.Context(),
+		`SELECT senha_hash, perfil
+		 FROM usuarios
+		 WHERE id = $1::uuid`,
+		claims.Subject,
+	).Scan(&senhaHash, &perfil)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeJSONError(w, http.StatusUnauthorized, "Usuário não encontrado.")
+			return
+		}
+		writeJSONError(w, http.StatusInternalServerError, "Erro ao consultar credenciais.")
+		return
+	}
+
+	if perfil == "ADMIN" {
+		writeJSONError(w, http.StatusForbidden, "Alteração de senha para administradores ainda não está habilitada.")
+		return
+	}
+
+	valid, err := VerifyPassword(req.SenhaAtual, senhaHash)
+	if err != nil || !valid {
+		writeJSONError(w, http.StatusUnauthorized, "Senha atual incorreta.")
+		return
+	}
+
+	novoHash, err := HashPassword(req.NovaSenha)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Erro ao processar nova senha.")
+		return
+	}
+
+	if _, err := h.pool.Exec(
+		r.Context(),
+		`UPDATE usuarios
+		 SET senha_hash = $1
+		 WHERE id = $2::uuid`,
+		novoHash,
+		claims.Subject,
+	); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Erro ao atualizar senha.")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"message": "Senha alterada com sucesso!",
 	})
 }
 

@@ -13,6 +13,9 @@
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
+    <!-- Chart.js (Métricas em Tempo Real) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
     <!-- Tailwind CSS + Configuração Compartilhada -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./js/tailwind-config.js"></script>
@@ -69,8 +72,8 @@
             </div>
         </section>
 
-        <!-- Menu por Cards de Ação Expansíveis (Acordeão em mobile < md, Grade 4 colunas em desktop >= md) -->
-        <section aria-label="Menu do painel administrativo" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Menu por Cards de Ação Expansíveis (Acordeão em mobile < md, Grade 5 colunas em lg+) -->
+        <section aria-label="Menu do painel administrativo" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <!-- Card 1: Categorias -->
             <div class="flex flex-col">
                 <button type="button" data-admin-card="categorias" aria-expanded="false" class="admin-card w-full h-full text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
@@ -145,10 +148,33 @@
                     </div>
                     <div>
                         <h2 class="font-poppins font-bold text-lg text-carbon">Alunos</h2>
-                        <p class="text-xs text-carbon/70 mt-1">Buscar contas de alunos e redefinir senhas.</p>
+                        <p class="text-xs text-carbon/70 mt-1">Buscar contas, liberar/bloquear acesso e resetar senhas.</p>
                     </div>
                 </button>
                 <div data-mobile-slot="alunos" class="md:hidden"></div>
+            </div>
+
+            <!-- Card 5: Métricas -->
+            <div class="flex flex-col">
+                <button type="button" data-admin-card="metricas" aria-expanded="false" class="admin-card w-full h-full text-left glass rounded-[1.5rem] p-5 border-2 border-white/60 shadow-glass flex flex-col justify-between gap-4 focus:outline-none">
+                    <div class="flex items-center justify-between gap-3 w-full">
+                        <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
+                            <i class="ph-fill ph-chart-line-up"></i>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="card-count-online" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-poppins font-semibold">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span id="card-online-num">0</span>
+                            </span>
+                            <i class="ph-bold ph-caret-down md:hidden admin-card-chevron text-carbon/50 text-lg"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="font-poppins font-bold text-lg text-carbon">Métricas</h2>
+                        <p class="text-xs text-carbon/70 mt-1">Acessos em tempo real, dispositivos e páginas.</p>
+                    </div>
+                </button>
+                <div data-mobile-slot="metricas" class="md:hidden"></div>
             </div>
         </section>
 
@@ -455,14 +481,25 @@
                 </span>
             </div>
 
-            <!-- Busca de Alunos -->
-            <form id="alunos-filtro-form" class="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-cloud border border-gray-100">
-                <div class="relative flex-1">
-                    <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-carbon/40 text-lg"></i>
-                    <input id="alunos-busca" name="q" type="text" placeholder="Buscar aluno por nome ou e-mail..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+            <!-- Busca e Filtro de Alunos -->
+            <form id="alunos-filtro-form" class="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 rounded-2xl bg-cloud border border-gray-100 items-end">
+                <div class="md:col-span-6">
+                    <label for="alunos-busca" class="block text-xs font-semibold text-carbon/70 mb-1">Buscar por nome ou e-mail</label>
+                    <div class="relative">
+                        <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-carbon/40 text-lg"></i>
+                        <input id="alunos-busca" name="q" type="text" placeholder="Buscar aluno por nome ou e-mail..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    </div>
                 </div>
-                <div class="flex gap-2">
-                    <button type="submit" class="bg-primary text-white px-5 py-2.5 rounded-xl font-poppins font-semibold text-sm hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5">
+                <div class="md:col-span-3">
+                    <label for="alunos-filtro-ativo" class="block text-xs font-semibold text-carbon/70 mb-1">Status de acesso</label>
+                    <select id="alunos-filtro-ativo" name="ativo" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-carbon focus:outline-none focus:border-primary">
+                        <option value="">Todos os alunos</option>
+                        <option value="true">Somente habilitados</option>
+                        <option value="false">Somente desabilitados</option>
+                    </select>
+                </div>
+                <div class="md:col-span-3 flex gap-2">
+                    <button type="submit" class="flex-1 bg-primary text-white px-5 py-2.5 rounded-xl font-poppins font-semibold text-sm hover:bg-primary/90 transition-colors inline-flex items-center justify-center gap-1.5">
                         <i class="ph-bold ph-magnifying-glass"></i> Buscar
                     </button>
                     <button id="alunos-limpar-btn" type="button" title="Limpar busca" class="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-carbon/70 hover:text-primary hover:border-primary transition-colors">
@@ -474,6 +511,129 @@
             <p id="alunos-feedback" role="alert" class="hidden px-4 py-3 rounded-xl border text-sm font-medium"></p>
 
             <div id="lista-alunos" class="space-y-3"></div>
+        </section>
+
+        <!-- PAINEL 5: Métricas em Tempo Real (Chart.js + Polling 10s) -->
+        <section id="painel-metricas" data-admin-panel="metricas" class="hidden scroll-mt-24 admin-panel-enter glass-dark rounded-[2rem] p-6 sm:p-8 shadow-glass border border-white/60 bg-white/65 backdrop-blur-xl space-y-6">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
+                        <i class="ph-fill ph-chart-line-up"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-poppins font-bold text-2xl text-carbon">Métricas em Tempo Real</h2>
+                        <p class="text-sm text-carbon/70">
+                            Atualização automática a cada 10s enquanto este painel está aberto.
+                            <span id="metricas-ultima-atualizacao" class="font-semibold text-primary ml-1"></span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <select id="metricas-dias" aria-label="Período de análise" class="px-4 py-2.5 rounded-xl bg-white/90 border border-gray-200 text-sm font-poppins font-semibold text-carbon focus:outline-none focus:border-primary">
+                        <option value="7" selected>Últimos 7 dias</option>
+                        <option value="15">Últimos 15 dias</option>
+                        <option value="30">Últimos 30 dias</option>
+                    </select>
+                    <button id="btn-atualizar-metricas" type="button" class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-poppins font-semibold hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5">
+                        <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+                    </button>
+                </div>
+            </div>
+
+            <p id="metricas-feedback" role="alert" class="hidden px-4 py-3 rounded-xl border text-sm font-medium"></p>
+
+            <!-- 4 KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass rounded-2xl p-5 border border-white/70 shadow-sm space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-carbon/65">Online agora</span>
+                        <span class="relative flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                    </div>
+                    <div id="kpi-online-agora" class="font-poppins font-extrabold text-3xl text-emerald-600">0</div>
+                    <p class="text-xs text-carbon/60">Sessões ativas nos últimos 90s</p>
+                </div>
+
+                <div class="glass rounded-2xl p-5 border border-white/70 shadow-sm space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-carbon/65">Sessões hoje</span>
+                        <i class="ph-fill ph-pulse text-primary text-xl"></i>
+                    </div>
+                    <div id="kpi-sessoes-hoje" class="font-poppins font-extrabold text-3xl text-primary">0</div>
+                    <p id="kpi-autenticados-hoje" class="text-xs text-carbon/60">0 usuários autenticados hoje</p>
+                </div>
+
+                <div class="glass rounded-2xl p-5 border border-white/70 shadow-sm space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-carbon/65">Duração média</span>
+                        <i class="ph-fill ph-timer text-accent text-xl"></i>
+                    </div>
+                    <div id="kpi-duracao-media" class="font-poppins font-extrabold text-3xl text-accent">0s</div>
+                    <p class="text-xs text-carbon/60">Tempo médio no período</p>
+                </div>
+
+                <div class="glass rounded-2xl p-5 border border-white/70 shadow-sm space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-carbon/65">Páginas / sessão</span>
+                        <i class="ph-fill ph-browsers text-primary text-xl"></i>
+                    </div>
+                    <div id="kpi-paginas-sessao" class="font-poppins font-extrabold text-3xl text-carbon">0</div>
+                    <p class="text-xs text-carbon/60">Média de navegação no período</p>
+                </div>
+            </div>
+
+            <!-- Gráficos Linha 1: Série Diária + Dispositivos -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-3">
+                    <div>
+                        <h3 class="font-poppins font-bold text-base text-carbon">Acessos e Visitantes Únicos por Dia</h3>
+                        <p class="text-xs text-carbon/60">Evolução diária de sessões e visitantes únicos (IP hash).</p>
+                    </div>
+                    <div class="relative h-64">
+                        <canvas id="chart-serie-diaria"></canvas>
+                        <p id="empty-serie-diaria" class="hidden absolute inset-0 flex items-center justify-center text-sm text-carbon/55">Sem dados registrados no período.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-3">
+                    <div>
+                        <h3 class="font-poppins font-bold text-base text-carbon">Dispositivos</h3>
+                        <p class="text-xs text-carbon/60">Distribuição por tipo de dispositivo.</p>
+                    </div>
+                    <div class="relative h-64">
+                        <canvas id="chart-dispositivos"></canvas>
+                        <p id="empty-dispositivos" class="hidden absolute inset-0 flex items-center justify-center text-sm text-carbon/55">Sem dados de dispositivos.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos Linha 2: Top Localidades + Páginas Mais Acessadas -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-3">
+                    <div>
+                        <h3 class="font-poppins font-bold text-base text-carbon">Top Localidades</h3>
+                        <p class="text-xs text-carbon/60">Principais origens de acesso (país / região / cidade).</p>
+                    </div>
+                    <div class="relative h-64">
+                        <canvas id="chart-localidades"></canvas>
+                        <p id="empty-localidades" class="hidden absolute inset-0 flex items-center justify-center text-sm text-carbon/55">Sem dados de localidade.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-3">
+                    <div>
+                        <h3 class="font-poppins font-bold text-base text-carbon">Páginas Mais Acessadas</h3>
+                        <p class="text-xs text-carbon/60">Ranking de visualizações por rota no período.</p>
+                    </div>
+                    <div class="relative h-64">
+                        <canvas id="chart-paginas"></canvas>
+                        <p id="empty-paginas" class="hidden absolute inset-0 flex items-center justify-center text-sm text-carbon/55">Sem visualizações de página no período.</p>
+                    </div>
+                </div>
+            </div>
         </section>
 
         </div>

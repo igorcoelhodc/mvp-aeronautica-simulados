@@ -1,12 +1,26 @@
 // dashboard.js — Painel do Aluno (Seleção de Banca/Matéria, Resumo de Desempenho e Histórico)
 
 import { apiRequest, getToken } from './api.js';
+import { initNavbar } from './navbar.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+function bootstrapDashboard() {
   const loadingEl = document.getElementById('dashboard-loading');
   const contentEl = document.getElementById('dashboard-content');
 
   const welcomeNameEl = document.getElementById('welcome-name');
+  const btnAlterarSenha = document.getElementById('btn-alterar-senha');
+
+  // Modal Alterar Senha
+  const altSenhaModal = document.getElementById('alterar-senha-modal');
+  const altSenhaClose = document.getElementById('alterar-senha-close');
+  const altSenhaCancel = document.getElementById('alterar-senha-cancel');
+  const altSenhaForm = document.getElementById('alterar-senha-form');
+  const altSenhaAtualInput = document.getElementById('alt-senha-atual');
+  const altNovaSenhaInput = document.getElementById('alt-nova-senha');
+  const altConfirmarSenhaInput = document.getElementById('alt-confirmar-senha');
+  const altSenhaFeedback = document.getElementById('alterar-senha-feedback');
+  const altSenhaSubmitBtn = document.getElementById('alterar-senha-submit');
+  const altSenhaSubmitLabel = document.getElementById('alterar-senha-submit-label');
 
   const statSimuladosEl = document.getElementById('stat-simulados');
   const statMediaEl = document.getElementById('stat-media');
@@ -377,6 +391,106 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  function showModalFeedback(message, type = 'error') {
+    if (!altSenhaFeedback) return;
+    if (!message) {
+      altSenhaFeedback.classList.add('hidden');
+      altSenhaFeedback.textContent = '';
+      return;
+    }
+    altSenhaFeedback.textContent = message;
+    altSenhaFeedback.classList.remove(
+      'hidden',
+      'bg-red-50',
+      'text-red-700',
+      'border-red-200',
+      'bg-emerald-50',
+      'text-emerald-700',
+      'border-emerald-200'
+    );
+    if (type === 'success') {
+      altSenhaFeedback.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+    } else {
+      altSenhaFeedback.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
+    }
+  }
+
+  function openAlterarSenhaModal() {
+    if (!altSenhaModal) return;
+    altSenhaForm?.reset();
+    showModalFeedback('');
+    altSenhaModal.classList.remove('hidden');
+    altSenhaModal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+    altSenhaAtualInput?.focus();
+  }
+
+  function closeAlterarSenhaModal() {
+    if (!altSenhaModal) return;
+    altSenhaModal.classList.add('hidden');
+    altSenhaModal.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  btnAlterarSenha?.addEventListener('click', openAlterarSenhaModal);
+  altSenhaClose?.addEventListener('click', closeAlterarSenhaModal);
+  altSenhaCancel?.addEventListener('click', closeAlterarSenhaModal);
+  altSenhaModal?.addEventListener('click', (event) => {
+    if (event.target === altSenhaModal) closeAlterarSenhaModal();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && altSenhaModal && !altSenhaModal.classList.contains('hidden')) {
+      closeAlterarSenhaModal();
+    }
+  });
+
+  altSenhaForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showModalFeedback('');
+
+    const senhaAtual = altSenhaAtualInput?.value || '';
+    const novaSenha = altNovaSenhaInput?.value || '';
+    const confirmar = altConfirmarSenhaInput?.value || '';
+
+    if (!senhaAtual) {
+      showModalFeedback('Informe sua senha atual.');
+      altSenhaAtualInput?.focus();
+      return;
+    }
+    if (novaSenha.length < 8) {
+      showModalFeedback('A nova senha deve ter pelo menos 8 caracteres.');
+      altNovaSenhaInput?.focus();
+      return;
+    }
+    if (novaSenha === senhaAtual) {
+      showModalFeedback('A nova senha deve ser diferente da senha atual.');
+      altNovaSenhaInput?.focus();
+      return;
+    }
+    if (novaSenha !== confirmar) {
+      showModalFeedback('A confirmação da nova senha não confere.');
+      altConfirmarSenhaInput?.focus();
+      return;
+    }
+
+    if (altSenhaSubmitBtn) altSenhaSubmitBtn.disabled = true;
+    if (altSenhaSubmitLabel) altSenhaSubmitLabel.textContent = 'Salvando...';
+
+    try {
+      const data = await apiRequest('/auth/alterar-senha', {
+        method: 'POST',
+        body: JSON.stringify({ senha_atual: senhaAtual, nova_senha: novaSenha }),
+      });
+      altSenhaForm.reset();
+      showModalFeedback(data?.message || 'Senha alterada com sucesso!', 'success');
+    } catch (err) {
+      showModalFeedback(err.message || 'Erro ao alterar senha.');
+    } finally {
+      if (altSenhaSubmitBtn) altSenhaSubmitBtn.disabled = false;
+      if (altSenhaSubmitLabel) altSenhaSubmitLabel.textContent = 'Salvar Senha';
+    }
+  });
+
   async function initDashboard() {
     if (!getToken()) {
       window.location.href = './login.html';
@@ -391,8 +505,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      initNavbar(usuario);
+
       const firstName = usuario.nome.split(' ')[0] || usuario.nome;
       if (welcomeNameEl) welcomeNameEl.textContent = firstName;
+
+      // Botão Alterar Senha visível exclusivamente para ALUNO (oculto para ADMIN)
+      if (usuario.perfil === 'ALUNO' && btnAlterarSenha) {
+        btnAlterarSenha.classList.remove('hidden');
+        btnAlterarSenha.classList.add('inline-flex');
+      }
 
       const [catsRes, simsRes] = await Promise.all([
         apiRequest('/categorias', { method: 'GET' }),
@@ -417,4 +539,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   initDashboard();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrapDashboard);
+} else {
+  bootstrapDashboard();
+}
